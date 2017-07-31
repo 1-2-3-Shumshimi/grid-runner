@@ -12,6 +12,7 @@ gridHeight = 0
 
 map = {}
 walkable = 0
+blocked = 1
 
 cells = nil
 myFinder = nil
@@ -21,9 +22,16 @@ endx, endy = 1, 1
 path = nil
 
 mouseDisabled = false
+mouseDisabledMax = 10
 mouseDisableCounter = 0
 
 creepList = {}
+creepTimer = 0
+creepTimerMax = 100
+creepNumMax = 10
+creepLocations = {}
+creepUpdated = true
+
 towerList = {}
 
 function love.load(arg)
@@ -40,20 +48,12 @@ function love.load(arg)
   end
   
   cells = grid(map)
-  myFinder = pathfinder(cells, 'BFS', walkable)
+  myFinder = pathfinder(cells, 'ASTAR', walkable)
   myFinder:setMode('ORTHOGONAL')
   endx, endy = gridWidth, gridHeight
   
   -- set initial path --
   path = myFinder:getPath(startx, starty, endx, endy, false)
-  
-  -- testing creep object orientedness
-  table.insert(creepList, creep:new())
-  creepList[1]:setHP(200)
-  table.insert(creepList, creep:new({HP = 100, speed = 5}))
-  for i, creep in ipairs(creepList) do
-    print (creep:toString())
-  end
 
 end
 
@@ -64,25 +64,55 @@ function love.update(dt)
     love.event.push('quit')
   end
   
+  --generate creep automatically
+  creepTimer = creepTimer + 1
+  if creepTimer > creepTimerMax and #creepList < creepNumMax then
+    creepTimer = 0
+    generateRandomCreep()
+  end
+  
+  --update creeps
+  for i, creep in ipairs(creepList) do
+    creepUpdated = creep:update(path, cellSize)
+    table.insert(creepLocations, {utils.coordToCell(creep.x, creep.y, cellSize)})
+  end
+  
   --create obstacle
   if love.mouse.isDown(1) and not mouseDisabled then
     cellX, cellY = utils.coordToCell(love.mouse.getX(), love.mouse.getY(), cellSize)
-    --notice cellX and cellY are flipped to coincide with the pathfinder module
-    if map[cellY][cellX] == walkable then
-      map[cellY][cellX] = blocked
-    else
-      map[cellY][cellX] = walkable
+    noCreepInCell = true
+    
+    --check to see if obstacle to be placed would be on top of a creep
+    --only build if it is not
+    for i, coord in ipairs(creepLocations) do
+      if cellX == coord[1] and cellY == coord[2] then
+        noCreepInCell = false
+      end
     end
-    mouseDisableCounter = 0
-    mouseDisabled = true
-    path = myFinder:getPath(startx, starty, endx, endy, false)
+    
+    if noCreepInCell then
+      --notice cellX and cellY are flipped to coincide with the pathfinder module
+      if map[cellY][cellX] == walkable then
+        map[cellY][cellX] = blocked
+      else
+        map[cellY][cellX] = walkable
+      end
+      mouseDisableCounter = 0
+      mouseDisabled = true
+      path = myFinder:getPath(startx, starty, endx, endy, false)
+    end
+    
   end
   
+  --buffer time between mouse actions
   mouseDisableCounter = mouseDisableCounter + 1
-  if mouseDisableCounter > 10 and not love.mouse.isDown(1) then
+  if mouseDisableCounter > mouseDisabledMax and not love.mouse.isDown(1) then
     mouseDisableCounter = 0
     mouseDisabled = false
   end
+  
+  --reset creep-related variables--
+  refreshCreeps()
 
 end
 
@@ -118,5 +148,31 @@ function love.draw(dt)
       love.graphics.circle("fill", cellX + cellSize/2, cellY + cellSize/2, cellSize/8, cellSize/8)
     end
   end
+  
+  --draw creeps--
+  love.graphics.setColor(50, 50, 255)
+  for i, creep in ipairs(creepList) do
+    love.graphics.circle("fill", creep.x, creep.y, cellSize/6, cellSize/6)
+  end
 end
 
+function generateRandomCreep()
+  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5)})
+  newCreep:setCoord(cellSize/4, cellSize/2)
+  table.insert(creepList, newCreep)
+end
+
+function refreshCreeps()
+  creepUpdated = true
+  creepLocations = {}
+  for i=#creepList, 1, -1 do
+    if creepList[i]:isDead() or creepList[i].atEnd then
+      updateScore(creepList[i])
+      table.remove(creepList, i)
+    end
+  end
+end
+
+function updateScore(creep)
+  --blank function to be used later for incrementing score, adding money, etc.--
+end
