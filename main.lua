@@ -52,6 +52,10 @@ function love.load(arg)
   myFinder:setMode('ORTHOGONAL')
   endx, endy = gridWidth, gridHeight
   
+  -- so creeps can create their own mini paths --
+  creep.cells = cells
+  creep.cellSize = cellSize
+  
   -- set initial path --
   path = myFinder:getPath(startx, starty, endx, endy, false)
 
@@ -73,7 +77,7 @@ function love.update(dt)
   
   --update creeps
   for i, creep in ipairs(creepList) do
-    creepUpdated = creep:update(path, cellSize)
+    creepUpdated = creep:update(path)
     table.insert(creepLocations, {utils.coordToCell(creep.x, creep.y, cellSize)})
   end
   
@@ -157,7 +161,7 @@ function love.draw(dt)
 end
 
 function generateRandomCreep()
-  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5)})
+  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5), originalPath = path})
   newCreep:setCoord(cellSize/4, cellSize/2)
   table.insert(creepList, newCreep)
 end
