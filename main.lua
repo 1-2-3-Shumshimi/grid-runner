@@ -20,6 +20,7 @@ myFinder = nil
 startx, starty = 1, 1
 endx, endy = 1, 1
 path = nil
+prevCellX, prevCellY = 1, 1
 
 mouseDisabled = false
 mouseDisabledMax = 10
@@ -77,8 +78,13 @@ function love.update(dt)
   
   --update creeps
   for i, creep in ipairs(creepList) do
-    creepUpdated = creep:update(path)
-    table.insert(creepLocations, {utils.coordToCell(creep.x, creep.y, cellSize)})
+    if creep:update(path) then
+      table.insert(creepLocations, {utils.coordToCell(creep.x, creep.y, cellSize)})
+    else
+      revertPath()
+      refreshCreeps()
+      break
+    end
   end
   
   --create obstacle
@@ -101,9 +107,15 @@ function love.update(dt)
       else
         map[cellY][cellX] = walkable
       end
+      prevCellX, prevCellY = cellX, cellY --set the revert path mechanism
       mouseDisableCounter = 0
       mouseDisabled = true
+      
       path = myFinder:getPath(startx, starty, endx, endy, false)
+      if not path then
+        revertPath()
+      end
+    
     end
     
   end
@@ -179,4 +191,11 @@ end
 
 function updateScore(creep)
   --blank function to be used later for incrementing score, adding money, etc.--
+end
+
+-- change the previously entered cellX and cellY to walkable
+function revertPath()
+  map[prevCellY][prevCellX] = walkable
+  print("Can't build blocking path")
+  path = myFinder:getPath(startx, starty, endx, endy, false)
 end

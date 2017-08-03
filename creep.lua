@@ -74,11 +74,8 @@ local creep = {}
     lookNextCell = false
     isLastCell = false
     next_cellX, next_cellY = nil, nil
-    print (self.recentlyOffPath)
     
     if path then
---      minDist = 1000000000
---      closestNode = nil
       for node, count in path:iter() do
         if self_cellX == node.x and self_cellY == node.y then --followed path to current; now need next
           lookNextCell = true
@@ -109,7 +106,7 @@ local creep = {}
           self:move(next_cellX, next_cellY)
         else 
           print ("creep is trapped")
-          -- todo something about this case --
+          return false
         end
       else
         print ("Getting back on the main path")
@@ -118,7 +115,6 @@ local creep = {}
       return true
     else
       print ("no path available")
-      -- todo something about this case -- 
       return false
     end
   end
