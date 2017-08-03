@@ -34,6 +34,7 @@ creepLocations = {}
 creepUpdated = true
 
 towerList = {}
+towerUpdated = false
 
 function love.load(arg)
   
@@ -104,8 +105,10 @@ function love.update(dt)
       --notice cellX and cellY are flipped to coincide with the pathfinder module
       if map[cellY][cellX] == walkable then
         map[cellY][cellX] = blocked
+        print("generating tower")
+        generateTower(cellX, cellY)
       else
-        map[cellY][cellX] = walkable
+        map[cellY][cellX] = walkable  -- JG: what is this for?
       end
       prevCellX, prevCellY = cellX, cellY --set the revert path mechanism
       mouseDisableCounter = 0
@@ -129,7 +132,9 @@ function love.update(dt)
   
   --reset creep-related variables--
   refreshCreeps()
-
+  
+  --reset tower items--
+  refreshTowers()
 end
 
 function love.draw(dt)
@@ -145,12 +150,26 @@ function love.draw(dt)
     love.graphics.line(0, i, love.graphics.getWidth(), i)
   end
   
-  --draw blocks--
+  --draw towers--
   love.graphics.setColor(255, 50, 50)
   for j=1, gridHeight do
     for i=1, gridWidth do
       if map[j][i] == blocked then
         cellX, cellY = utils.cellToCoord(i, j, cellSize)
+        
+        for i=#towerList, 1, -1 do
+          if towerList[i].x == j and towerList[i].y == i then
+            -- confirm that this grid contains a tower, mark with color
+            -- print("found tower")
+            love.graphics.setColor(255, 0, 255)
+            break
+          
+          else 
+            -- something's wrong: tower created but not matched with blocked grid
+            -- print("tower not found: ", towerList[i].x, ",", towerList[i].y, " ", j, ",", i)
+          end
+        
+        end
         love.graphics.rectangle("fill", cellX, cellY, cellSize, cellSize)
       end
     end
@@ -187,6 +206,16 @@ function refreshCreeps()
       table.remove(creepList, i)
     end
   end
+end
+
+function generateTower(cellY, cellX)
+  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 4, size = 2}))
+  towerN:setCoord(cellX, cellY)
+  table.insert(towerList, towerN)
+end
+
+function refreshTowers()
+  -- skeleton, for the case that towers may have HP
 end
 
 function updateScore(creep)
