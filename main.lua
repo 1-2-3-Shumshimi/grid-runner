@@ -12,7 +12,7 @@ gridHeight = 0
 
 map = {}
 walkable = 0
-blocked = 1
+blocked = 10
 
 cells = nil
 myFinder = nil
@@ -105,10 +105,11 @@ function love.update(dt)
       --notice cellX and cellY are flipped to coincide with the pathfinder module
       if map[cellY][cellX] == walkable then
         map[cellY][cellX] = blocked
-        print("generating tower")
+        -- print("blocked cell (", cellX, cellY, ")")
+        -- print("generating tower")
         generateTower(cellX, cellY)
       else
-        map[cellY][cellX] = walkable  -- JG: what is this for?
+        map[cellY][cellX] = walkable
       end
       prevCellX, prevCellY = cellX, cellY --set the revert path mechanism
       mouseDisableCounter = 0
@@ -157,16 +158,12 @@ function love.draw(dt)
       if map[j][i] == blocked then
         cellX, cellY = utils.cellToCoord(i, j, cellSize)
         
-        for i=#towerList, 1, -1 do
-          if towerList[i].x == j and towerList[i].y == i then
-            -- confirm that this grid contains a tower, mark with color
+        -- confirm that this grid contains a tower, mark with color
+        for k=#towerList, 1, -1 do
+          if towerList[k].x == j and towerList[k].y == i then
             -- print("found tower")
             love.graphics.setColor(255, 0, 255)
             break
-          
-          else 
-            -- something's wrong: tower created but not matched with blocked grid
-            -- print("tower not found: ", towerList[i].x, ",", towerList[i].y, " ", j, ",", i)
           end
         
         end
