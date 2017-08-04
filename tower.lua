@@ -9,6 +9,7 @@ local tower = {}
   tower.attackSpeed = 1
   tower.damage = 2
   tower.range = 4
+  tower.attackCapacity = 1  -- i.e. # of enemies it can attack simultaneously
   
   -- map placement characteristics
   tower.size = 1
@@ -21,7 +22,7 @@ local tower = {}
   -- create a new creep object
   -- either pass in a table with {} or set it later
   function tower:new(object)
-    object = object or {attackSpeed = tower.attackSpeed, damage = tower.damage, range = tower.range, size = tower.size}
+    object = object or {attackSpeed = tower.attackSpeed, damage = tower.damage, range = tower.range, attackCapacity = tower.attackCapacity, size = tower.size}
     
     object.needsUpdate = true
     
