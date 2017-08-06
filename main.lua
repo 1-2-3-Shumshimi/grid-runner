@@ -156,7 +156,7 @@ function love.draw(dt)
   for j=1, gridHeight do
     for i=1, gridWidth do
       if map[j][i] == blocked then
-        cellX, cellY = utils.cellToCoord(i, j, cellSize)
+        coordX, coordY = utils.cellToCoord(i, j, cellSize)
         
         -- confirm that this grid contains a tower, mark with color
         for k=#towerList, 1, -1 do
@@ -167,7 +167,7 @@ function love.draw(dt)
           end
         
         end
-        love.graphics.rectangle("fill", cellX, cellY, cellSize, cellSize)
+        love.graphics.rectangle("fill", coordX, coordY, cellSize, cellSize)
       end
     end
   end
@@ -176,8 +176,8 @@ function love.draw(dt)
   love.graphics.setColor(50, 255, 50)
   if path then
     for node in path:nodes() do
-      cellX, cellY = utils.cellToCoord(node.x, node.y, cellSize)
-      love.graphics.circle("fill", cellX + cellSize/2, cellY + cellSize/2, cellSize/8, cellSize/8)
+      coordX, coordY = utils.cellToCoord(node.x, node.y, cellSize)
+      love.graphics.circle("fill", coordX + cellSize/2, coordY + cellSize/2, cellSize/8, cellSize/8)
     end
   end
   
