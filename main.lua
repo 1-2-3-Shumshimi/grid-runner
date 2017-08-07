@@ -6,6 +6,11 @@ creep = require('creep')
 tower = require('tower')
 
 --declare variables--
+gameWidth = 0
+gameHeight = 0
+sideBarWidth = 0
+sideBarHeight = 0
+
 cellSize = 0
 gridWidth = 0
 gridHeight = 0
@@ -38,9 +43,14 @@ towerUpdated = false
 
 function love.load(arg)
   
-  cellSize = utils.findGCF(love.graphics.getWidth(), love.graphics.getHeight()) / 4
-  gridWidth = love.graphics.getWidth() / cellSize
-  gridHeight = love.graphics.getHeight() / cellSize
+  gameHeight = love.graphics.getHeight()
+  gameWidth = (love.graphics.getWidth() * 4) / 5
+  sideBarWidth = love.graphics.getWidth() / 5 -- let sidebar take 1/5 of the game window
+  sideBarHeight = love.graphics.getHeight()
+  
+  cellSize = utils.findGCF(gameWidth, gameHeight) / 4
+  gridWidth = gameWidth / cellSize
+  gridHeight = gameHeight / cellSize
   
   for j=1,gridHeight do
     map[j] = {}
@@ -143,12 +153,12 @@ function love.draw(dt)
   --draw grid--
   --vertical lines--
   love.graphics.setColor(255, 255, 255)
-  for i=0, love.graphics:getWidth(), cellSize do
-    love.graphics.line(i, 0, i, love.graphics:getHeight())
+  for i=0, gameWidth, cellSize do
+    love.graphics.line(i, 0, i, gameHeight)
   end
   --horizontal lines--
-  for i=0, love.graphics:getHeight(), cellSize do
-    love.graphics.line(0, i, love.graphics.getWidth(), i)
+  for i=0, gameHeight, cellSize do
+    love.graphics.line(0, i, gameWidth, i)
   end
   
   --draw towers--
