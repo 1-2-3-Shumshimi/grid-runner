@@ -70,7 +70,7 @@ function love.load(arg)
   
   -- set initial path --
   path = myFinder:getPath(startx, starty, endx, endy, false)
-
+  
 end
 
 function love.update(dt)
@@ -186,7 +186,7 @@ function love.draw(dt)
   love.graphics.setColor(50, 255, 50)
   if path then
     for node in path:nodes() do
-      coordX, coordY = utils.cellToCoord(node.x, node.y, cellSize)
+      coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), cellSize)
       love.graphics.circle("fill", coordX + cellSize/2, coordY + cellSize/2, cellSize/8, cellSize/8)
     end
   end

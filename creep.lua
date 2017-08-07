@@ -54,7 +54,7 @@ local creep = {}
     oldPath = self.originalPath
     x, y = utils.coordToCell(self.x, self.y, creep.cellSize)
     if oldPath then
-      self.newPath = creep.finder:getPath(x, y, oldPath[oldPath:getLength() + 1].x, oldPath[oldPath:getLength() + 1].y)
+      self.newPath = creep.finder:getPath(x, y, oldPath._nodes[oldPath:getLength() + 1]:getX(), oldPath._nodes[oldPath:getLength() + 1]:getY())
     end
   end
   
@@ -77,11 +77,11 @@ local creep = {}
     
     if path then
       for node, count in path:iter() do
-        if self_cellX == node.x and self_cellY == node.y then --followed path to current; now need next
+        if self_cellX == node:getX() and self_cellY == node:getY() then --followed path to current; now need next
           lookNextCell = true
           isLastCell = ( count == path:getLength() + 1 ) -- +1 for one-based indexing
         elseif lookNextCell then
-          next_cellX, next_cellY = node.x, node.y
+          next_cellX, next_cellY = node:getX(), node:getY()
           break
         end
       end
@@ -95,11 +95,11 @@ local creep = {}
         self:setNewPath()
         if self.newPath then
           for node, count in self.newPath:iter() do
-            if self_cellX == node.x and self_cellY == node.y then --followed path to current; now need next
+            if self_cellX == node:getX() and self_cellY == node:getY() then --followed path to current; now need next
               lookNextCell = true
               isLastCell = ( count == self.newPath:getLength() + 1 ) -- +1 for one-based indexing
             elseif lookNextCell then
-              next_cellX, next_cellY = node.x, node.y
+              next_cellX, next_cellY = node:getX(), node:getY()
               break
             end
           end
