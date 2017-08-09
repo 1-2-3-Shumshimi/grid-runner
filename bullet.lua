@@ -1,9 +1,28 @@
 -- from https://love2d.org/wiki/Tutorial:Fire_Toward_Mouse
 
-bullets = {}
-towerHitList = {}  -- map tower to # of creeps currently engaged
+-- TO-DO: inherit some properties of the tower class?
 
-function computeTrajectory(startX, startY, endX, endY)
+local bullet = {}
+local bullets = {}  -- can you have a static reference too?
+
+bullet.damage = 1
+bullet.speed = 1
+bullet.x = 0
+bullet.y = 0
+
+function bullet:new(object)
+  object = object or {damage = object.damage, speed = object.speed}
+  setmetatable(object, self)
+  self.__index = self
+  return object
+end
+
+function bullet:update()
+  
+  
+end
+
+function bullet.computeTrajectory(startX, startY, endX, endY)
 	if button == 1 then
  
 		local angle = math.atan2((endY - startY), (endX - startX))

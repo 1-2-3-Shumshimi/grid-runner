@@ -123,7 +123,7 @@ function love.update(dt)
     end
   end
   
-  --create obstacle
+  --create obstacle/tower
   if love.mouse.isDown(1) and not mouseDisabled then
     cellX, cellY = utils.coordToCell(love.mouse.getX(), love.mouse.getY(), cellSize)
     noCreepInCell = true
@@ -155,7 +155,14 @@ function love.update(dt)
         revertPath()
       end
     end
-    
+  end
+  
+  --determine whether any creeps will be attacked by towers--
+  for i, tower in ipairs(towerList) do
+    if not tower:isBusy() then
+      determineCreepsInRange(tower)
+      
+    end
   end
   
   --buffer time between mouse actions
@@ -261,6 +268,29 @@ end
 
 function updateScore(creep)
   --blank function to be used later for incrementing score, adding money, etc.--
+end
+
+function determineCreepsInRange(tower)
+  local x = tower.x
+  local y = tower.y
+  for i, creep in ipairs(creepList) do
+    
+    if tower:isBusy() then
+      break
+    end
+    
+    local creepX = creep.x
+    local creepY = creep.y
+    local distToTower = utils.dist(x,y,creepX,creepY)
+    
+    if distToTower <= tower.range then
+      -- create a bullet intended for the creep: origin, target position, speed
+      
+      tower:incrementOccupancy()  -- is there an easy way to increment in Lua?
+      
+    end
+    
+  end
 end
 
 -- change the previously entered cellX and cellY to walkable

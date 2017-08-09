@@ -33,4 +33,7 @@ function utils.cellToCoord(cellX, cellY, cellSize)
   return (cellX - 1) * cellSize, (cellY - 1) * cellSize
 end
 
+-- Computes euclidean distance between 2D points
+function utils.dist(x1,y1, x2,y2) return ((x2-x1)^2+(y2-y1)^2)^0.5 end
+
 return utils
