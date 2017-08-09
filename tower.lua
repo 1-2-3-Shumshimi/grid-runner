@@ -10,6 +10,7 @@ local tower = {}
   tower.damage = 2
   tower.range = 4
   tower.attackCapacity = 1  -- i.e. # of enemies it can attack simultaneously
+  tower.attackOccupancy = 0 -- i.e. # of enemies it is currently attacking
   
   -- map placement characteristics
   tower.size = 1
@@ -24,6 +25,7 @@ local tower = {}
   function tower:new(object)
     object = object or {attackSpeed = tower.attackSpeed, damage = tower.damage, range = tower.range, attackCapacity = tower.attackCapacity, size = tower.size}
     
+    object.attackOccupancy = 0
     object.needsUpdate = true
     
     setmetatable(object, self)
@@ -37,6 +39,16 @@ local tower = {}
     self.x = x
     self.y = y
   end
+  
+  -- determines whether tower is attacking max # of creeps
+  function tower:isBusy()
+    return (self.attackCapacity == self.attackOccupancy)
+  end
+  
+  function tower:incrementOccupancy()
+    self.attackOccupancy = self.attackOccupancy + 1
+  end
+  
   
   function tower:draw()
     -- redraw all towers on map
