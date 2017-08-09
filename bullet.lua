@@ -22,7 +22,7 @@ function bullet:update()
   
 end
 
-function bullet.computeTrajectory(startX, startY, endX, endY)
+function bullet:computeTrajectory(startX, startY, endX, endY)
 	if button == 1 then
  
 		local angle = math.atan2((endY - startY), (endX - startX))
