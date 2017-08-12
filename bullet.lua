@@ -29,7 +29,6 @@ function bullet:update()
   
 end
 
-
 function bullet:setOrigin(towerX, towerY)
   self.x = towerX
   self.y = towerY
@@ -49,6 +48,7 @@ function bullet:computeTrajectory(startX, startY, endX, endY)
  
   local bulletDx = bullet.speed * 2000 * math.cos(angle) -- TODO: variable-ize constant
   local bulletDy = bullet.speed * 2000 * math.sin(angle)
+
  
  
   --moveSet = {}

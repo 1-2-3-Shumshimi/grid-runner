@@ -252,13 +252,14 @@ function love.draw(dt)
   
   -- draw bullets --
   love.graphics.setColor(255, 50, 50)
+  
   for i=#bulletList,1,-1 do
     bullet = bulletList[i]
     startX, startY, bulletDx, bulletDy = bullet:computeTrajectory(bullet.x, bullet.y, bullet.destX, bullet.destY)
+
     deltaTime = love.timer.getDelta()
     bullet:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
    
-    --bullet:setCoord(moveSet.x + moveSet.dx * dt, moveSet.y + moveSet.dy * dt)
     love.graphics.circle("fill", bullet.x, bullet.y, cellSize/10)
     
     -- bullet reaching destination, within error range
@@ -267,6 +268,10 @@ function love.draw(dt)
       table.remove(bulletList, i)
     end
   end
+    
+  
+
+  
 end
 
 function generateRandomCreep()
