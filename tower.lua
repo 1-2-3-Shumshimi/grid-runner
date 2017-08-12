@@ -12,6 +12,9 @@ local tower = {}
   tower.attackCapacity = 1  -- i.e. # of enemies it can attack simultaneously
   tower.attackOccupancy = 0 -- i.e. # of enemies it is currently attacking
   
+  tower.hasFired = false
+  tower.lastFired = 0
+  
   -- map placement characteristics
   tower.size = 1
   
@@ -27,6 +30,8 @@ local tower = {}
     
     object.attackOccupancy = 0
     object.needsUpdate = true
+    object.hasFired = false
+    object.lastFired = 0
     
     setmetatable(object, self)
     self.__index = self
@@ -49,6 +54,9 @@ local tower = {}
     self.attackOccupancy = self.attackOccupancy + 1
   end
   
+  function tower:resetOccupancy()
+    self.attackOccupancy = 0
+  end
   
   function tower:draw()
     -- redraw all towers on map
