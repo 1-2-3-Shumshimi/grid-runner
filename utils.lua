@@ -11,6 +11,12 @@ function utils.checkCollision(x1,y1,w1,h1, x2,y2,w2,h2)
   y2 < y1+h1
 end
 
+function utils.checkBulletCollision(x1,y1, x2,y2,w2,h2)
+  return x1 < x2+w2 and
+  x1 < x2+w2 and
+  y1 < y2+h2
+end 
+
 -- Uses the Euclidean algorithm to find the greatest common factor
 -- Arguments are order; largeN is greater than smallN
 function utils.findGCF(largeN, smallN)

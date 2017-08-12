@@ -47,8 +47,8 @@ function bullet:computeTrajectory(startX, startY, endX, endY)
  
   local angle = math.atan2((endY - startY), (endX - startX))
  
-  local bulletDx = bullet.speed * 1000 * math.cos(angle) -- TODO: variable-ize constant
-  local bulletDy = bullet.speed * 1000 * math.sin(angle)
+  local bulletDx = bullet.speed * 2000 * math.cos(angle) -- TODO: variable-ize constant
+  local bulletDy = bullet.speed * 2000 * math.sin(angle)
  
  
   --moveSet = {}
