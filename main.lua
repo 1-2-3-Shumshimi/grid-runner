@@ -2,7 +2,7 @@
 utils = require('utils')
 grid = require('jumper.grid') --https://github.com/Yonaba/Jumper.git
 pathfinder = require('jumper.pathfinder')
-suit = require('SUIT') --https://github.com/vrld/SUIT.git
+button = require('UI.button')
 creep = require('creep')
 tower = require('tower')
 
@@ -11,6 +11,7 @@ titleText = "Grid Runner"
 creepImageURLs = {"assets/blue-triangle.png", "assets/orange-star.png", "assets/yellow-diamond.png", "assets/teal-circle.png"}
 creepImages = {}
 creepButtons = {}
+creepButtonPadding = 10
 
 gameWidth = 0
 gameHeight = 0
@@ -77,9 +78,22 @@ function love.load(arg)
   -- set initial path --
   path = myFinder:getPath(startx, starty, endx, endy, false)
   
-  -- make creep images for buttons --
+  -- set creep button image, size and coord --
+  buttonCoordPointer = {x = gameWidth, y = 0}
   for i, url in ipairs(creepImageURLs) do
     creepImages[i] = love.graphics.newImage(url)
+    creepButtons[i] = button:new()
+    creepButtons[i]:setImage(creepImages[i])
+    creepButtons[i]:setSize(sideBarWidth / 2 - creepButtonPadding, sideBarWidth / 2 - creepButtonPadding)
+    
+    creepButtons[i]:setCoord(buttonCoordPointer.x + creepButtonPadding, buttonCoordPointer.y + creepButtonPadding)
+    if buttonCoordPointer.x + creepButtons[i].width + creepButtonPadding < love.graphics.getWidth() then
+      buttonCoordPointer.x = buttonCoordPointer.x + creepButtons[i].width + creepButtonPadding
+    else
+      buttonCoordPointer.y = buttonCoordPointer.y + creepButtons[i].height + creepButtonPadding
+      buttonCoordPointer.x = gameWidth
+    end
+    
   end
   
 end
@@ -158,20 +172,17 @@ function love.update(dt)
   refreshTowers()
   
   --update sidebar
-  suit.layout:reset(gameWidth, 0, 20, 20) --20 px of padding
-  suit.Label(titleText, {align = "center"}, suit.layout:row(sideBarWidth, 40))
-  for i, image in ipairs(creepImages) do
-    if suit.ImageButton(image, suit.layout:row()).hit then
-      print("hit = "..i)
-    end
-  end
+  
 
 end
 
 function love.draw(dt)
   
   --draw sidebar--
-  suit.draw()
+  love.graphics.setColor(255, 255, 255)
+  for i, creepButton in ipairs(creepButtons) do
+    creepButton:draw()
+  end
 
   --draw grid--
   --vertical lines--
