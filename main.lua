@@ -78,14 +78,16 @@ function love.load(arg)
   -- set initial path --
   path = myFinder:getPath(startx, starty, endx, endy, false)
   
-  -- set creep button image, size and coord --
+  -- set up creep buttons --
   buttonCoordPointer = {x = gameWidth, y = 0}
   for i, url in ipairs(creepImageURLs) do
+    -- image
     creepImages[i] = love.graphics.newImage(url)
     creepButtons[i] = button:new()
     creepButtons[i]:setImage(creepImages[i])
     creepButtons[i]:setSize(sideBarWidth / 2 - creepButtonPadding, sideBarWidth / 2 - creepButtonPadding)
     
+    -- coord
     creepButtons[i]:setCoord(buttonCoordPointer.x + creepButtonPadding, buttonCoordPointer.y + creepButtonPadding)
     if buttonCoordPointer.x + creepButtons[i].width + creepButtonPadding < love.graphics.getWidth() then
       buttonCoordPointer.x = buttonCoordPointer.x + creepButtons[i].width + creepButtonPadding
@@ -93,6 +95,9 @@ function love.load(arg)
       buttonCoordPointer.y = buttonCoordPointer.y + creepButtons[i].height + creepButtonPadding
       buttonCoordPointer.x = gameWidth
     end
+    
+    --function
+    creepButtons[i]:setHit(generateCreep)
     
   end
   
@@ -123,9 +128,10 @@ function love.update(dt)
     end
   end
   
-  --create obstacle
+  --mouse actions
   if love.mouse.isDown(1) and not mouseDisabled then
-    cellX, cellY = utils.coordToCell(love.mouse.getX(), love.mouse.getY(), cellSize)
+    mouseCoordX, mouseCoordY = love.mouse.getX(), love.mouse.getY()
+    cellX, cellY = utils.coordToCell(mouseCoordX, mouseCoordY, cellSize)
     noCreepInCell = true
     
     --check to see if obstacle to be placed would be on top of a creep
@@ -156,6 +162,13 @@ function love.update(dt)
       end
     end
     
+      --update sidebar
+    for i, creepButton in ipairs(creepButtons) do
+      if creepButton:checkHit(mouseCoordX, mouseCoordY) then
+        creepButton.hit(creepButton.image)
+      end
+    end
+    
   end
   
   --buffer time between mouse actions
@@ -170,9 +183,6 @@ function love.update(dt)
   
   --reset tower items--
   refreshTowers()
-  
-  --update sidebar
-  
 
 end
 
@@ -226,10 +236,15 @@ function love.draw(dt)
   end
   
   --draw creeps--
-  love.graphics.setColor(50, 50, 255)
   for i, creep in ipairs(creepList) do
-    love.graphics.circle("fill", creep.x, creep.y, cellSize/6, cellSize/6)
+    creep:draw()
   end
+end
+
+function generateCreep(creepImage)
+  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5), originalPath = path, image = creepImage})
+  newCreep:setCoord(cellSize/4, cellSize/2)
+  table.insert(creepList, newCreep)
 end
 
 function generateRandomCreep()

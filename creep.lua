@@ -11,6 +11,7 @@ local creep = {}
   creep.cells = nil
   creep.finder = nil
   creep.cellSize = 0
+  creep.image = nil
 
 -- create a new creep object --
 -- either pass in a table with {HP = x, speed = x, originalPath = path}
@@ -128,8 +129,15 @@ local creep = {}
   
   -- draw creep object
   function creep:draw()
-    -- Empty for now, but potentially migrate functionality from main 
-    -- drawing becomes more complicated
+    if self.image then
+      love.graphics.setColor(255, 255, 255)
+      scaleX = (creep.cellSize / 2) / self.image:getWidth()
+      scaleY = (creep.cellSize / 2) / self.image:getHeight()
+      love.graphics.draw(self.image, self.x, self.y, 0, scaleX, scaleY, creep.cellSize, creep.cellSize)
+    else
+      love.graphics.setColor(50, 50, 255)
+      love.graphics.circle("fill", self.x, self.y, cellSize/6, cellSize/6)
+    end
   end
   
 return creep

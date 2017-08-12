@@ -46,6 +46,10 @@ local button = {}
       self.hit = func
     end
     
+    function button:checkHit(mouseX, mouseY)
+      return mouseX > self.x and mouseX < self.x + self.width and mouseY > self.y and mouseY < self.y + self.height
+    end
+    
     -- start the buffer time between button hits
     function button:restartCooldown()
       self.isOff = true
