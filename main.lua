@@ -5,6 +5,7 @@ pathfinder = require('jumper.pathfinder')
 button = require('UI.button')
 creep = require('creep')
 tower = require('tower')
+bullet = require('bullet')
 
 --declare variables--
 titleText = "Grid Runner"
@@ -47,6 +48,8 @@ creepUpdated = true
 
 towerList = {}
 towerUpdated = false
+
+bulletList = {}
 
 function love.load(arg)
   
@@ -160,10 +163,15 @@ function love.update(dt)
   --determine whether any creeps will be attacked by towers--
   for i, tower in ipairs(towerList) do
     if not tower:isBusy() then
-      determineCreepsInRange(tower)
-      
+      if not tower.hasFired then
+        determineCreepsInRange(tower)
+      else if tower.lastFired >= tower.attackSpeed then
+        determineCreepsInRange(tower)
+      end
     end
+    tower.lastFired = tower.lastFired + 0.01  -- TODO: variable-ize this constant
   end
+end
   
   --buffer time between mouse actions
   mouseDisableCounter = mouseDisableCounter + 1
@@ -212,6 +220,10 @@ function love.draw(dt)
         -- confirm that this grid contains a tower, mark with color
         for k=#towerList, 1, -1 do
           if towerList[k].x == j and towerList[k].y == i then
+            
+            -- reset attack occupancy of towers -- 
+            towerList[k]:resetOccupancy()
+            
             -- print("found tower")
             love.graphics.setColor(255, 0, 255)
             break
@@ -237,6 +249,34 @@ function love.draw(dt)
   for i, creep in ipairs(creepList) do
     love.graphics.circle("fill", creep.x, creep.y, cellSize/6, cellSize/6)
   end
+  
+  -- draw bullets --
+  love.graphics.setColor(255, 50, 50)
+  for i, bullet in ipairs(bulletList) do
+    print("creating bullet")
+    --moveSet = bullet:computeTrajectory(bullet.x, bullet.y, bullet.destX, bullet.destY)
+    startX, startY, bulletDx, bulletDy = bullet:computeTrajectory(bullet.x, bullet.y, bullet.destX, bullet.destY)
+    
+    
+    
+    
+    deltaTime = love.timer.getDelta()
+    bullet:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
+   
+    --bullet:setCoord(moveSet.x + moveSet.dx * dt, moveSet.y + moveSet.dy * dt)
+    love.graphics.circle("fill", bullet.x, bullet.y, cellSize/8, cellSize/8)
+    
+    -- bullet reaching destination, within error range
+    if utils.dist(bullet.x, bullet.y, bullet.destX, bullet.destY) < 0.05 then
+      -- remove bullet from list
+      table.remove(bulletList, i)
+      i = i-1
+    end
+    
+  end
+  
+
+  
 end
 
 function generateRandomCreep()
@@ -270,27 +310,53 @@ function updateScore(creep)
   --blank function to be used later for incrementing score, adding money, etc.--
 end
 
+
 function determineCreepsInRange(tower)
   local x = tower.x
   local y = tower.y
+  
   for i, creep in ipairs(creepList) do
-    
     if tower:isBusy() then
+      print("tower is busy")
       break
     end
     
     local creepX = creep.x
     local creepY = creep.y
-    local distToTower = utils.dist(x,y,creepX,creepY)
     
-    if distToTower <= tower.range then
-      -- create a bullet intended for the creep: origin, target position, speed
-      
+    -- convert creep coordinates to grid cell coordinates
+    creepCellY, creepCellX = utils.coordToCell(creepX, creepY, cellSize)
+    
+    --print("POSITIONS", x," ", y, " ", creepCellX, " ", creepCellY) 
+    
+    local distToTower = utils.dist(x,y,creepCellX,creepCellY)
+        
+    towerCoordX, towerCoordY = utils.cellToCoord(tower.x, tower.y, cellSize)  -- for bullet coordinates
+    --print(towerCoordX, towerCoordY, creep.y, creep.x)
+    
+    if distToTower <= tower.range then      
+      generateBullet(towerCoordX, towerCoordY, creep.x, creep.y)
       tower:incrementOccupancy()  -- is there an easy way to increment in Lua?
-      
+      tower.hasFired = true
+      tower.lastFired = 0
     end
     
   end
+end
+
+
+count = 0
+
+function generateBullet(towerX, towerY, destX, destY)
+  
+  bulletN = bullet:new({damage=1, speed=1})
+  
+  bulletN:setOrigin(towerY, towerX)
+  bulletN:setCourse(destX, destY)
+  
+  -- insert into bullet list -- 
+  table.insert(bulletList, bulletN)
+  
 end
 
 -- change the previously entered cellX and cellY to walkable
