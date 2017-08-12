@@ -1,11 +1,17 @@
 --imports--
 utils = require('utils')
-grid = require('jumper.grid')
+grid = require('jumper.grid') --https://github.com/Yonaba/Jumper.git
 pathfinder = require('jumper.pathfinder')
+suit = require('SUIT') --https://github.com/vrld/SUIT.git
 creep = require('creep')
 tower = require('tower')
 
 --declare variables--
+titleText = "Grid Runner"
+creepImageURLs = {"assets/blue-triangle.png", "assets/orange-star.png", "assets/yellow-diamond.png", "assets/teal-circle.png"}
+creepImages = {}
+creepButtons = {}
+
 gameWidth = 0
 gameHeight = 0
 sideBarWidth = 0
@@ -71,6 +77,11 @@ function love.load(arg)
   -- set initial path --
   path = myFinder:getPath(startx, starty, endx, endy, false)
   
+  -- make creep images for buttons --
+  for i, url in ipairs(creepImageURLs) do
+    creepImages[i] = love.graphics.newImage(url)
+  end
+  
 end
 
 function love.update(dt)
@@ -129,7 +140,6 @@ function love.update(dt)
       if not path then
         revertPath()
       end
-    
     end
     
   end
@@ -146,9 +156,22 @@ function love.update(dt)
   
   --reset tower items--
   refreshTowers()
+  
+  --update sidebar
+  suit.layout:reset(gameWidth, 0, 20, 20) --20 px of padding
+  suit.Label(titleText, {align = "center"}, suit.layout:row(sideBarWidth, 40))
+  for i, image in ipairs(creepImages) do
+    if suit.ImageButton(image, suit.layout:row()).hit then
+      print("hit = "..i)
+    end
+  end
+
 end
 
 function love.draw(dt)
+  
+  --draw sidebar--
+  suit.draw()
 
   --draw grid--
   --vertical lines--
