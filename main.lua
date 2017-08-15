@@ -9,9 +9,11 @@ tower = require('tower')
 --declare variables--
 titleText = "Grid Runner"
 creepImageURLs = {"assets/blue-triangle.png", "assets/orange-star.png", "assets/yellow-diamond.png", "assets/teal-circle.png"}
+creepTexts = {"Blue Triangle", "Orange Star", "Yellow Diamond", "Teal Circle"}
 creepImages = {}
 creepButtons = {}
-creepButtonPadding = 10
+creepButtonPadding = 20
+displayButtonInfoBox = -1
 
 gameWidth = 0
 gameHeight = 0
@@ -88,7 +90,7 @@ function love.load(arg)
     creepButtons[i]:setSize(sideBarWidth / 2 - creepButtonPadding, sideBarWidth / 2 - creepButtonPadding)
     
     -- coord
-    creepButtons[i]:setCoord(buttonCoordPointer.x + creepButtonPadding, buttonCoordPointer.y + creepButtonPadding)
+    creepButtons[i]:setCoord(buttonCoordPointer.x + creepButtonPadding / 2, buttonCoordPointer.y + creepButtonPadding / 2)
     if buttonCoordPointer.x + creepButtons[i].width + creepButtonPadding < love.graphics.getWidth() then
       buttonCoordPointer.x = buttonCoordPointer.x + creepButtons[i].width + creepButtonPadding
     else
@@ -98,6 +100,7 @@ function love.load(arg)
     
     --function
     creepButtons[i]:setHit(generateCreep)
+    creepButtons[i]:setText(creepTexts[i])
     
   end
   
@@ -129,8 +132,11 @@ function love.update(dt)
   end
   
   --mouse actions
-  if love.mouse.isDown(1) and not mouseDisabled then
-    mouseCoordX, mouseCoordY = love.mouse.getX(), love.mouse.getY()
+  mouseCoordX, mouseCoordY = love.mouse.getX(), love.mouse.getY()
+  
+  --building tower mouse actions
+  if love.mouse.isDown(1) and not mouseDisabled and inGameArea(mouseCoordX, mouseCoordY) then
+    
     cellX, cellY = utils.coordToCell(mouseCoordX, mouseCoordY, cellSize)
     noCreepInCell = true
     
@@ -161,14 +167,20 @@ function love.update(dt)
         revertPath()
       end
     end
-    
-      --update sidebar
-    for i, creepButton in ipairs(creepButtons) do
-      if creepButton:checkHit(mouseCoordX, mouseCoordY) then
+  end
+  
+  --sidebar mouse actions
+  displayButtonInfoBox = -1
+  for i, creepButton in ipairs(creepButtons) do
+    if creepButton:onButton(mouseCoordX, mouseCoordY) then
+      displayButtonInfoBox = i
+      if love.mouse.isDown(1) and not mouseDisabled then
         creepButton.hit(creepButton.image)
+        mouseDisableCounter = 0
+        mouseDisabled = true
       end
+      break
     end
-    
   end
   
   --buffer time between mouse actions
@@ -192,6 +204,9 @@ function love.draw(dt)
   love.graphics.setColor(255, 255, 255)
   for i, creepButton in ipairs(creepButtons) do
     creepButton:draw()
+    if (displayButtonInfoBox == i) then
+      creepButton:drawInfoBox()
+    end
   end
 
   --draw grid--
@@ -239,6 +254,10 @@ function love.draw(dt)
   for i, creep in ipairs(creepList) do
     creep:draw()
   end
+end
+
+function inGameArea(mouseX, mouseY)
+  return mouseX < gameWidth and mouseY < gameHeight 
 end
 
 function generateCreep(creepImage)
