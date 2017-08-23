@@ -169,7 +169,9 @@ function love.update(dt)
         determineCreepsInRange(tower)
       end
     end
-    tower.lastFired = tower.lastFired + 0.01  -- TODO: variable-ize this constant
+    -- reset attack occupancy of tower after setting targets -- 
+    tower:resetOccupancy()
+    tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
   end
 end
   
@@ -221,9 +223,6 @@ function love.draw(dt)
         for k=#towerList, 1, -1 do
           if towerList[k].x == j and towerList[k].y == i then
             
-            -- reset attack occupancy of towers -- 
-            towerList[k]:resetOccupancy()
-            
             -- print("found tower")
             love.graphics.setColor(255, 0, 255)
             break
@@ -268,10 +267,6 @@ function love.draw(dt)
       table.remove(bulletList, i)
     end
   end
-    
-  
-
-  
 end
 
 function generateRandomCreep()
@@ -292,7 +287,7 @@ function refreshCreeps()
 end
 
 function generateTower(cellY, cellX)
-  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 4, attackCapacity = 1, size = 2}))
+  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 10, attackCapacity = 1, size = 2}))
   towerN:setCoord(cellX, cellY)
   table.insert(towerList, towerN)
 end
@@ -328,6 +323,8 @@ function determineCreepsInRange(tower)
         
     towerCoordX, towerCoordY = utils.cellToCoord(tower.x, tower.y, cellSize)  -- for bullet coordinates
     --print(towerCoordX, towerCoordY, creep.y, creep.x)
+    
+    print("distToTower", distToTower)
     
     if distToTower <= tower.range then      
       generateBullet(towerCoordX, towerCoordY, creep.x, creep.y)
