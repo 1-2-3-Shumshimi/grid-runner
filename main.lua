@@ -5,6 +5,7 @@ pathfinder = require('jumper.pathfinder')
 button = require('UI.button')
 creep = require('creep')
 tower = require('tower')
+bullet = require('bullet')
 
 --declare variables--
 titleText = "Grid Runner"
@@ -49,6 +50,8 @@ creepUpdated = true
 
 towerList = {}
 towerUpdated = false
+
+bulletList = {}
 
 function love.load(arg)
   
@@ -183,6 +186,21 @@ function love.update(dt)
     end
   end
   
+  --determine whether any creeps will be attacked by towers--
+  for i, tower in ipairs(towerList) do
+    if not tower:isBusy() then
+      if not tower.hasFired then
+        determineCreepsInRange(tower)
+      else if tower.lastFired >= tower.attackSpeed then
+        determineCreepsInRange(tower)
+      end
+    end
+    -- reset attack occupancy of tower after setting targets -- 
+    tower:resetOccupancy()
+    tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
+  end
+end
+  
   --buffer time between mouse actions
   mouseDisableCounter = mouseDisableCounter + 1
   if mouseDisableCounter > mouseDisabledMax and not love.mouse.isDown(1) then
@@ -230,6 +248,7 @@ function love.draw(dt)
         -- confirm that this grid contains a tower, mark with color
         for k=#towerList, 1, -1 do
           if towerList[k].x == j and towerList[k].y == i then
+            
             -- print("found tower")
             love.graphics.setColor(255, 0, 255)
             break
@@ -253,6 +272,25 @@ function love.draw(dt)
   --draw creeps--
   for i, creep in ipairs(creepList) do
     creep:draw()
+  end
+  
+  -- draw bullets --
+  love.graphics.setColor(255, 50, 50)
+  
+  for i=#bulletList,1,-1 do
+    bullet = bulletList[i]
+    startX, startY, bulletDx, bulletDy = bullet:computeTrajectory(bullet.x, bullet.y, bullet.destX, bullet.destY)
+
+    deltaTime = love.timer.getDelta()
+    bullet:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
+   
+    love.graphics.circle("fill", bullet.x, bullet.y, cellSize/10)
+    
+    -- bullet reaching destination, within error range
+    if utils.checkBulletCollision(bullet.x, bullet.y, bullet.destX, bullet.destY, cellSize, cellSize) then
+      -- remove bullet from list
+      table.remove(bulletList, i)
+    end
   end
 end
 
@@ -284,7 +322,7 @@ function refreshCreeps()
 end
 
 function generateTower(cellY, cellX)
-  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 4, size = 2}))
+  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 10, attackCapacity = 1, size = 2}))
   towerN:setCoord(cellX, cellY)
   table.insert(towerList, towerN)
 end
@@ -295,6 +333,56 @@ end
 
 function updateScore(creep)
   --blank function to be used later for incrementing score, adding money, etc.--
+end
+
+
+function determineCreepsInRange(tower)
+  local x = tower.x
+  local y = tower.y
+  
+  for i, creep in ipairs(creepList) do
+    if tower:isBusy() then
+      print("tower is busy")
+      break
+    end
+    
+    local creepX = creep.x
+    local creepY = creep.y
+    
+    -- convert creep coordinates to grid cell coordinates
+    creepCellY, creepCellX = utils.coordToCell(creepX, creepY, cellSize)
+    
+    --print("POSITIONS", x," ", y, " ", creepCellX, " ", creepCellY) 
+    
+    local distToTower = utils.dist(x,y,creepCellX,creepCellY)
+        
+    towerCoordX, towerCoordY = utils.cellToCoord(tower.x, tower.y, cellSize)  -- for bullet coordinates
+    --print(towerCoordX, towerCoordY, creep.y, creep.x)
+    
+    print("distToTower", distToTower)
+    
+    if distToTower <= tower.range then      
+      generateBullet(towerCoordX, towerCoordY, creep.x, creep.y)
+      tower:incrementOccupancy()  -- is there an easy way to increment in Lua?
+      tower.hasFired = true
+      tower.lastFired = 0
+    end
+  end
+end
+
+
+count = 0
+
+function generateBullet(towerX, towerY, destX, destY)
+  
+  bulletN = bullet:new({damage=1, speed=1})
+  
+  bulletN:setOrigin(towerY, towerX)
+  bulletN:setCourse(destX, destY)
+  
+  -- insert into bullet list -- 
+  table.insert(bulletList, bulletN)
+  
 end
 
 -- change the previously entered cellX and cellY to walkable

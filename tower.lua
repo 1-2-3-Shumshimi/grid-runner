@@ -9,6 +9,11 @@ local tower = {}
   tower.attackSpeed = 1
   tower.damage = 2
   tower.range = 4
+  tower.attackCapacity = 1  -- i.e. # of enemies it can attack simultaneously
+  tower.attackOccupancy = 0 -- i.e. # of enemies it is currently attacking
+  
+  tower.hasFired = false
+  tower.lastFired = 0
   
   -- map placement characteristics
   tower.size = 1
@@ -21,9 +26,12 @@ local tower = {}
   -- create a new creep object
   -- either pass in a table with {} or set it later
   function tower:new(object)
-    object = object or {attackSpeed = tower.attackSpeed, damage = tower.damage, range = tower.range, size = tower.size}
+    object = object or {attackSpeed = tower.attackSpeed, damage = tower.damage, range = tower.range, attackCapacity = tower.attackCapacity, size = tower.size}
     
+    object.attackOccupancy = 0
     object.needsUpdate = true
+    object.hasFired = false
+    object.lastFired = 0
     
     setmetatable(object, self)
     self.__index = self
@@ -35,6 +43,19 @@ local tower = {}
   function tower:setCoord(x, y) 
     self.x = x
     self.y = y
+  end
+  
+  -- determines whether tower is attacking max # of creeps
+  function tower:isBusy()
+    return (self.attackCapacity == self.attackOccupancy)
+  end
+  
+  function tower:incrementOccupancy()
+    self.attackOccupancy = self.attackOccupancy + 1
+  end
+  
+  function tower:resetOccupancy()
+    self.attackOccupancy = 0
   end
   
   function tower:draw()
