@@ -322,7 +322,9 @@ function refreshCreeps()
 end
 
 function generateTower(cellY, cellX)
-  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 10, attackCapacity = 1, size = 2}))
+  --towerN = tower:new(({attackSpeed = 1, damage = 2, range = 10, attackCapacity = 1, size = 2}))
+  
+  towerN = tower(1, 2, 10, 1, 2)
   towerN:setCoord(cellX, cellY)
   table.insert(towerList, towerN)
 end
