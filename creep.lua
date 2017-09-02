@@ -136,7 +136,7 @@ local creep = {}
       love.graphics.draw(self.image, self.x, self.y, 0, scaleX, scaleY, creep.cellSize, creep.cellSize)
     else
       love.graphics.setColor(50, 50, 255)
-      love.graphics.circle("fill", self.x, self.y, cellSize/6, cellSize/6)
+      love.graphics.circle("fill", self.x, self.y, creep.cellSize/6, creep.cellSize/6)
     end
   end
   
