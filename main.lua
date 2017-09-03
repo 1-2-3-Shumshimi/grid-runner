@@ -1,5 +1,6 @@
 --library imports--
 gamestate = require('hump.gamestate')
+class = require('hump.class')
 grid = require('jumper.grid') --https://github.com/Yonaba/Jumper.git
 pathfinder = require('jumper.pathfinder')
 

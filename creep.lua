@@ -1,33 +1,22 @@
-local creep = {}
-
-  creep.HP = 0
-  creep.speed = 0
-  creep.x = 0
-  creep.y = 0
-  creep.atEnd = false
-  creep.recentlyOffPath = false
-  creep.originalPath = nil
-  creep.newPath = nil
-  creep.cells = nil
-  creep.finder = nil
-  creep.cellSize = 0
-  creep.image = nil
-
--- create a new creep object --
--- either pass in a table with {HP = x, speed = x, originalPath = path}
--- or set it later
-  function creep:new(object)
-    object = object or {HP = creep.HP, speed = creep.speed}
-    object.reachedEnd = creep.reachedEnd
-    object.recentlyOffPath = creep.recentlyOffPath
-
-    creep.finder = pathfinder(creep.cells, 'ASTAR', walkable)
-    creep.finder:setMode('ORTHOGONAL')
+creep = class {
+  init = function(self, HP, speed, image, originalPath)
+    self.HP = HP
+    self.speed = speed
+    self.x = 0
+    self.y = 0
     
-    setmetatable(object, self)
-    self.__index = self
-    return object
+    self.atEnd = false
+    self.recentlyOffPath = false
+    self.originalPath = originalPath
+    self.newPath = nil
+    self.cells = nil
+    self.finder = pathfinder(creep.cells, 'ASTAR', walkable)
+    self.finder:setMode('ORTHOGONAL')
+    
+    self.cellSize = 0
+    self.image = image
   end
+}
 
 -- set health points of creep --
   function creep:setHP(HP)

@@ -282,13 +282,15 @@ function game.inGameArea(mouseX, mouseY)
 end
 
 function game.generateCreep(creepImage)
-  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5), originalPath = game.path, image = creepImage})
+  newCreep = creep(math.random(1,5)*100, math.random(1,5), creepImage, game.path)
+--  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5), originalPath = game.path, image = creepImage})
   newCreep:setCoord(game.cellSize/4, game.cellSize/2)
   table.insert(game.creepList, newCreep)
 end
 
 function game.generateRandomCreep()
-  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5), originalPath = game.path})
+--  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5), nil, originalPath = game.path})
+  newCreep = creep(math.random(1,5)*100, math.random(1,5), nil, game.path)
   newCreep:setCoord(game.cellSize/4, game.cellSize/2)
   table.insert(game.creepList, newCreep)
 end
