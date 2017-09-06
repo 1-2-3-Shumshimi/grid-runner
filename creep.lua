@@ -116,6 +116,10 @@ creep = class {
     self.y = self.y + ((next_coordY - self.y + creep.cellSize/2) / 20) * self.speed
   end
   
+  function creep:takeDamage(damage)
+    self.HP = self.HP - damage
+  end
+  
   -- draw creep object
   function creep:draw()
     if self.image then
