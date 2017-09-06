@@ -70,7 +70,7 @@ function game:enter(arg)
   for i, url in ipairs(game.creepImageURLs) do
     -- image
     game.creepImages[i] = love.graphics.newImage(url)
-    game.creepButtons[i] = button:new()
+    game.creepButtons[i] = button(1000)
     game.creepButtons[i]:setImage(game.creepImages[i])
     game.creepButtons[i]:setSize(game.sideBarWidth / 2 - game.creepButtonPadding, game.sideBarWidth / 2 - game.creepButtonPadding)
     

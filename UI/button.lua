@@ -1,3 +1,5 @@
+class = require "hump.class"
+
 button = class {
   init = function(self, cooldown)
     self.hit = nil
