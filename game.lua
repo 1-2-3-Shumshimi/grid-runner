@@ -8,6 +8,8 @@ displayButtonInfoBox = -1,
 gameWidth = 0, gameHeight = 0, sideBarWidth = 0, sideBarHeight = 0,
 cellSize = 0, gridWidth = 0, gridHeight = 0,
 
+dt = 0,
+
 map = {},
 walkable = 0, blocked = 10,
 
@@ -26,7 +28,7 @@ creepLocations = {},
 creepUpdated = true,
 
 creepImageURLs = {"assets/blue-triangle.png", "assets/orange-star.png", "assets/yellow-diamond.png", "assets/teal-circle.png"},
-creepTexts = {"Blue Triangle", "Orange Star", "Yellow Diamond", "Teal Circle"},
+creepTexts = {"bmg1", "ftr1", "avt1", "amg1"},
 
 towerList = {},
 towerUpdated = false,
@@ -98,12 +100,15 @@ function game:update(dt)
     love.event.push('quit')
   end
   
+  --update game's dt variable to be used in animation
+  game.dt = dt
+  
   --generate creep automatically
-  game.creepTimer = game.creepTimer + 1
-  if game.creepTimer > game.creepTimerMax and #game.creepList < game.creepNumMax then
-    game.creepTimer = 0
-    game.generateRandomCreep()
-  end
+--  game.creepTimer = game.creepTimer + 1
+--  if game.creepTimer > game.creepTimerMax and #game.creepList < game.creepNumMax then
+--    game.creepTimer = 0
+--    game.generateRandomCreep()
+--  end
   
   --update creeps
   for i, creep in ipairs(game.creepList) do
@@ -160,7 +165,8 @@ function game:update(dt)
     if creepButton:onButton(mouseCoordX, mouseCoordY) then
       game.displayButtonInfoBox = i
       if love.mouse.isDown(1) and not game.mouseDisabled then
-        creepButton.hit(creepButton.image)
+        --creepButton.hit(creepButton.image) commented out for testing purposes with line below
+        creepButton.hit(love.graphics.newImage("assets/"..game.creepTexts[i]..".png")) --NOT OPTIMAL TODO: FIX
         game.mouseDisableCounter = 0
         game.mouseDisabled = true
       end
@@ -281,19 +287,17 @@ function game.inGameArea(mouseX, mouseY)
   return mouseX < game.gameWidth and mouseY < game.gameHeight 
 end
 
-function game.generateCreep(creepImage)
-  newCreep = creep(math.random(1,5)*100, math.random(1,5), creepImage, game.path)
---  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5), originalPath = game.path, image = creepImage})
+function game.generateCreep(creepSpriteSheet, dt)
+  newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.path)
   newCreep:setCoord(game.cellSize/4, game.cellSize/2)
   table.insert(game.creepList, newCreep)
 end
 
-function game.generateRandomCreep()
---  newCreep = creep:new({HP = math.random(1,5)*100, speed = math.random(1,5), nil, originalPath = game.path})
-  newCreep = creep(math.random(1,5)*100, math.random(1,5), nil, game.path)
-  newCreep:setCoord(game.cellSize/4, game.cellSize/2)
-  table.insert(game.creepList, newCreep)
-end
+--function game.generateRandomCreep()
+--  newCreep = creep(math.random(1,5)*100, math.random(1,5), nil, game.path)
+--  newCreep:setCoord(game.cellSize/4, game.cellSize/2)
+--  table.insert(game.creepList, newCreep)
+--end
 
 function game.refreshCreeps()
   game.creepUpdated = true

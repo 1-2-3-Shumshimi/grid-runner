@@ -1,5 +1,5 @@
 creep = class {
-  init = function(self, HP, speed, image, originalPath)
+  init = function(self, HP, speed, spriteSheet, originalPath)
     self.HP = HP
     self.speed = speed
     self.x = 0
@@ -9,12 +9,18 @@ creep = class {
     self.recentlyOffPath = false
     self.originalPath = originalPath
     self.newPath = nil
-    self.cells = nil
-    self.finder = pathfinder(creep.cells, 'ASTAR', walkable)
+    self.finder = pathfinder(game.cells, 'ASTAR', walkable)
     self.finder:setMode('ORTHOGONAL')
     
-    self.cellSize = 0
-    self.image = image
+    self.spriteSheet = spriteSheet
+    if self.spriteSheet then
+      self.grid = anim8.newGrid(32, 32, spriteSheet:getWidth(), spriteSheet:getHeight())
+      self.upAnim = anim8.newAnimation(self.grid('1-2', 1), game.dt*10) --TODO: variablize animation rate?
+      self.downAnim = anim8.newAnimation(self.grid('1-2', 2), game.dt*10)
+      self.leftAnim = anim8.newAnimation(self.grid(3, '1-2'), game.dt*10)
+      self.rightAnim = anim8.newAnimation(self.grid(4, '1-2'), game.dt*10)
+    end
+    self.direction = "down"
   end
 }
 
@@ -42,9 +48,9 @@ creep = class {
   -- set new path as creep's current coord as the start
   function creep:setNewPath()
     oldPath = self.originalPath
-    x, y = utils.coordToCell(self.x, self.y, creep.cellSize)
+    x, y = utils.coordToCell(self.x, self.y, game.cellSize)
     if oldPath then
-      self.newPath = creep.finder:getPath(x, y, oldPath._nodes[oldPath:getLength() + 1]:getX(), oldPath._nodes[oldPath:getLength() + 1]:getY())
+      self.newPath = self.finder:getPath(x, y, oldPath._nodes[oldPath:getLength() + 1]:getX(), oldPath._nodes[oldPath:getLength() + 1]:getY())
     end
   end
   
@@ -60,7 +66,7 @@ creep = class {
 
 -- update a creep object
   function creep:update(path)
-    self_cellX, self_cellY = utils.coordToCell(self.x, self.y, creep.cellSize)
+    self_cellX, self_cellY = utils.coordToCell(self.x, self.y, game.cellSize)
     lookNextCell = false
     isLastCell = false
     next_cellX, next_cellY = nil, nil
@@ -79,7 +85,7 @@ creep = class {
       if isLastCell then 
         self:reachedEnd()
       elseif next_cellX and next_cellY then
-        self:move(next_cellX, next_cellY)
+        self:move(self_cellX, self_cellY, next_cellX, next_cellY)
         self.recentlyOffPath = false
       elseif self.recentlyOffPath then
         self:setNewPath()
@@ -110,22 +116,63 @@ creep = class {
   end
   
   -- takes the cell size and next cell x,y of the creep and sets the creep x,y
-  function creep:move(next_cellX, next_cellY)
-    next_coordX, next_coordY = utils.cellToCoord(next_cellX, next_cellY, creep.cellSize)
-    self.x = self.x + ((next_coordX - self.x + creep.cellSize/2) / 20) * self.speed
-    self.y = self.y + ((next_coordY - self.y + creep.cellSize/2) / 20) * self.speed
+  function creep:move(self_cellX, self_cellY, next_cellX, next_cellY)
+    next_coordX, next_coordY = utils.cellToCoord(next_cellX, next_cellY, game.cellSize)
+    self:updateDirection(self_cellX, self_cellY, next_cellX, next_cellY)
+    
+    if self.direction == "right" then
+      self.x = self.x + self.speed
+    elseif self.direction == "left" then
+      self.x = self.x - self.speed
+    elseif self.direction == "up" then
+      self.y = self.y - self.speed
+    elseif self.direction == "down" then
+      self.y = self.y + self.speed
+    end
+  end
+  
+  function creep:updateDirection(self_cellX, self_cellY, next_cellX, next_cellY)
+    if self.spriteSheet then
+      xDiffBigger = math.abs(self_cellX - next_cellX) - math.abs(self_cellY - next_cellY) > 0
+      if xDiffBigger then 
+        if self_cellX < next_cellX then 
+          self.direction = "right"
+          self.rightAnim:update(game.dt)
+        else
+          self.direction = "left"
+          self.leftAnim:update(game.dt)
+        end
+      else
+        if self_cellY > next_cellY then
+          self.direction = "up"
+          self.upAnim:update(game.dt)
+        else
+          self.direction = "down"
+          self.downAnim:update(game.dt)
+        end
+      end
+    end
   end
   
   -- draw creep object
   function creep:draw()
-    if self.image then
+    if self.spriteSheet then
       love.graphics.setColor(255, 255, 255)
-      scaleX = (creep.cellSize / 2) / self.image:getWidth()
-      scaleY = (creep.cellSize / 2) / self.image:getHeight()
-      love.graphics.draw(self.image, self.x, self.y, 0, scaleX, scaleY, creep.cellSize, creep.cellSize)
+--      scaleX = (creep.cellSize / 2) / self.image:getWidth()
+--      scaleY = (creep.cellSize / 2) / self.image:getHeight()
+--      love.graphics.draw(self.image, self.x, self.y, 0, scaleX, scaleY, creep.cellSize, creep.cellSize)
+      if self.direction == "right" then
+        self.rightAnim:draw(self.spriteSheet, self.x, self.y)
+      elseif self.direction == "left" then
+        self.leftAnim:draw(self.spriteSheet, self.x, self.y)
+      elseif self.direction == "up" then
+        self.upAnim:draw(self.spriteSheet, self.x, self.y)
+      else
+        self.downAnim:draw(self.spriteSheet, self.x, self.y)
+      end
     else
       love.graphics.setColor(50, 50, 255)
-      love.graphics.circle("fill", self.x, self.y, creep.cellSize/6, creep.cellSize/6)
+      love.graphics.circle("fill", self.x, self.y, game.cellSize/6, game.cellSize/6)
     end
   end
   
