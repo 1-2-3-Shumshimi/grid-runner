@@ -111,7 +111,23 @@ function game:update(dt)
 --    game.creepTimer = 0
 --    game.generateRandomCreep()
 --  end
-  
+
+  --check for bullet collisions with creeps or target destinations
+  for i, bulletN in ipairs(game.bulletList) do
+    for j, creep in ipairs(game.creepList) do
+      if bulletN:checkBulletHitCreep(creep.x, creep.y, game.cellSize) then
+        -- damage creep health + remove bullet from list
+        print("creep", i, "takes damage; HP left: ", creep.HP)
+        creep:takeDamage(bulletN.damage)
+        if creep:isDead() then
+          table.remove(game.creepList, j)
+        end
+        table.remove(game.bulletList, i)
+      elseif bulletN:checkBulletReachDest(game.cellSize) then
+        table.remove(game.bulletList, i)
+      end
+    end
+  end
   --update creeps
   for i, creep in ipairs(game.creepList) do
     if creep:update(game.path) then
@@ -177,19 +193,19 @@ function game:update(dt)
   end
   
   --determine whether any creeps will be attacked by towers--
---  for i, tower in ipairs(game.towerList) do
---    if not tower:isBusy() then
---      if not tower.hasFired then
---        game.determineCreepsInRange(tower)
---      elseif tower.lastFired >= tower.attackSpeed then
---        game.determineCreepsInRange(tower)
---      end
+  for i, tower in ipairs(game.towerList) do
+    if not tower:isBusy() then
+      if not tower.hasFired then
+        game.determineCreepsInRange(tower)
+      elseif tower.lastFired >= tower.attackSpeed then
+        game.determineCreepsInRange(tower)
+      end
     
---    -- reset attack occupancy of tower after setting targets -- 
---    tower:resetOccupancy()
---    tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
---    end
---  end
+    -- reset attack occupancy of tower after setting targets -- 
+    tower:resetOccupancy()
+    tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
+    end
+  end
   
   --buffer time between mouse actions
   game.mouseDisableCounter = game.mouseDisableCounter + 1
@@ -268,19 +284,20 @@ function game:draw(dt)
   love.graphics.setColor(255, 50, 50)
   
   for i=#game.bulletList,1,-1 do
-    bullet = game.bulletList[i]
-    startX, startY, bulletDx, bulletDy = bullet:computeTrajectory(bullet.x, bullet.y, bullet.destX, bullet.destY)
+    bulletN = game.bulletList[i]
+    startX, startY, bulletDx, bulletDy = bulletN:computeTrajectory(bulletN.x, bulletN.y, bulletN.destX, bulletN.destY)
 
     deltaTime = love.timer.getDelta()
-    bullet:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
+    bulletN:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
    
-    love.graphics.circle("fill", bullet.x, bullet.y, game.cellSize/10)
+    love.graphics.circle("fill", bulletN.x, bulletN.y, game.cellSize/10)
     
     -- bullet reaching destination, within error range
-    if utils.checkBulletCollision(bullet.x, bullet.y, bullet.destX, bullet.destY, game.cellSize, game.cellSize) then
-      -- remove bullet from list
-      table.remove(game.bulletList, i)
-    end
+    -- TODO: fine tune error box
+--    if bulletN:checkBulletReachDest(game.cellSize) then
+--      -- remove bullet from list
+--      table.remove(game.bulletList, i)
+--    end
   end
   
 end
@@ -313,7 +330,8 @@ function game.refreshCreeps()
 end
 
 function game.generateTower(cellY, cellX)
-  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 10, attackCapacity = 1, size = 2}))
+--  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 10, attackCapacity = 1, size = 2}))
+  towerN = tower(2,2,10,1,2)
   towerN:setCoord(cellX, cellY)
   table.insert(game.towerList, towerN)
 end
@@ -362,8 +380,8 @@ function game.determineCreepsInRange(tower)
 end
 
 function game.generateBullet(towerX, towerY, destX, destY)
-  
-  bulletN = bullet:new({damage=1, speed=1})
+
+  bulletN = bullet(50,3)
   
   bulletN:setOrigin(towerY, towerX)
   bulletN:setCourse(destX, destY)

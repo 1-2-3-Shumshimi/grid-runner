@@ -156,6 +156,10 @@ creep = class {
     end    
   end
   
+  function creep:takeDamage(damage)
+    self.HP = self.HP - damage
+  end
+  
   -- draw creep object
   function creep:draw()
     if self.spriteSheet then

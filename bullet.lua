@@ -1,62 +1,52 @@
 -- from https://love2d.org/wiki/Tutorial:Fire_Toward_Mouse
 
 -- TO-DO: inherit some properties of the tower class?
+Class = require "hump.class"
+bullet = Class {
+  init = function(self, damage, speed)
+    self.damage = damage
+    self.speed = speed
+    self.x = 0
+    self.y = 0
+    self.destX = 0
+    self.destY = 0
+  end
+}
 
-local bullet = {}
+function bullet:update()
+  
+  
+end
 
-    bullet.damage = 1
-    bullet.speed = 1
-    bullet.x = 0
-    bullet.y = 0
-    bullet.destX = 0
-    bullet.destY = 0
+function bullet:setOrigin(towerX, towerY)
+  self.x = towerX
+  self.y = towerY
+end
+function bullet:setCourse(destX, destY)
+  self.destX = destX
+  self.destY = destY
+end
+function bullet:setCoord(intermedX, intermedY)
+  self.x = intermedX
+  self.y = intermedY
+end
 
-    function bullet:new(object)
-      object = object or {damage = bullet.damage, speed = bullet.speed}
-      
-      object.destX = 0
-      object.destY = 0
-      object.x = 0
-      object.y = 0
-      
-      setmetatable(object, self)
-      self.__index = self
-      return object
-    end
+function bullet:computeTrajectory(startX, startY, endX, endY)
+ 
+  local angle = math.atan2((endY - startY), (endX - startX))
+ 
+  local bulletDx = self.speed * 2000 * math.cos(angle) -- TODO: variable-ize constant
+  local bulletDy = self.speed * 2000 * math.sin(angle)
+ 
+  return startX, startY, bulletDx, bulletDy
+end
 
-    function bullet:update()
-      
-      
-    end
+function bullet:checkBulletReachDest(errorRange)
+  return math.abs(self.x-self.destX) < errorRange and math.abs(self.y-self.destY) < errorRange
+end
 
-    function bullet:setOrigin(towerX, towerY)
-      self.x = towerX
-      self.y = towerY
-    end
-    function bullet:setCourse(destX, destY)
-      self.destX = destX
-      self.destY = destY
-    end
-    function bullet:setCoord(intermedX, intermedY)
-      self.x = intermedX
-      self.y = intermedY
-    end
-
-    function bullet:computeTrajectory(startX, startY, endX, endY)
-     
-      local angle = math.atan2((endY - startY), (endX - startX))
-     
-      local bulletDx = bullet.speed * 2000 * math.cos(angle) -- TODO: variable-ize constant
-      local bulletDy = bullet.speed * 2000 * math.sin(angle)
-
-     
-     
-      --moveSet = {}
-      --table.insert(moveSet, {x = startX, y = startY, dx = bulletDx, dy = bulletDy})
-     
-      return startX, startY, bulletDx, bulletDy
-      -- table.insert(bullets, {x = startX, y = startY, dx = bulletDx, dy = bulletDy})
-    end
-
-
+function bullet:checkBulletHitCreep(creepX, creepY, errorRange)
+  print(math.abs(self.x-creepX), math.abs(self.y-creepY), errorRange)
+  return math.abs(self.x-creepX) < errorRange and math.abs(self.y-creepY) < errorRange
+end
 return bullet
