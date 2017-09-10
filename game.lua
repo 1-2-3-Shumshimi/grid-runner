@@ -8,6 +8,8 @@ displayButtonInfoBox = -1,
 gameWidth = 0, gameHeight = 0, sideBarWidth = 0, sideBarHeight = 0,
 cellSize = 0, gridWidth = 0, gridHeight = 0,
 
+tilesetURL = "assets/terrain.png";
+
 dt = 0,
 
 map = {},
@@ -61,8 +63,8 @@ function game:enter(arg)
   game.endx, game.endy = game.gridWidth, game.gridHeight
   
   -- so creeps can create their own mini paths --
-  creep.cells = game.cells
-  creep.cellSize = game.cellSize
+--  creep.cells = game.cells
+--  creep.cellSize = game.cellSize
   
   -- set initial path --
   game.path = game.myFinder:getPath(game.startx, game.starty, game.endx, game.endy, false)
@@ -142,8 +144,8 @@ function game:update(dt)
       --notice cellX and cellY are flipped to coincide with the pathfinder module
       if game.map[cellY][cellX] == game.walkable then
         game.map[cellY][cellX] = game.blocked
-        -- print("blocked cell (", cellX, cellY, ")")
-        -- print("generating tower")
+        print("blocked cell (", cellX, cellY, ")")
+        print("generating tower")
         game.generateTower(cellX, cellY)
       else
         game.map[cellY][cellX] = game.walkable
@@ -175,19 +177,19 @@ function game:update(dt)
   end
   
   --determine whether any creeps will be attacked by towers--
-  for i, tower in ipairs(game.towerList) do
-    if not tower:isBusy() then
-      if not tower.hasFired then
-        game.determineCreepsInRange(tower)
-      elseif tower.lastFired >= tower.attackSpeed then
-        game.determineCreepsInRange(tower)
-      end
+--  for i, tower in ipairs(game.towerList) do
+--    if not tower:isBusy() then
+--      if not tower.hasFired then
+--        game.determineCreepsInRange(tower)
+--      elseif tower.lastFired >= tower.attackSpeed then
+--        game.determineCreepsInRange(tower)
+--      end
     
-    -- reset attack occupancy of tower after setting targets -- 
-    tower:resetOccupancy()
-    tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
-    end
-  end
+--    -- reset attack occupancy of tower after setting targets -- 
+--    tower:resetOccupancy()
+--    tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
+--    end
+--  end
   
   --buffer time between mouse actions
   game.mouseDisableCounter = game.mouseDisableCounter + 1
@@ -289,7 +291,7 @@ end
 
 function game.generateCreep(creepSpriteSheet, dt)
   newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.path)
-  newCreep:setCoord(game.cellSize/4, game.cellSize/2)
+  newCreep:setCoord(game.cellSize/2, game.cellSize/2)
   table.insert(game.creepList, newCreep)
 end
 

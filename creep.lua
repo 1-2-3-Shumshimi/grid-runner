@@ -9,12 +9,15 @@ creep = class {
     self.recentlyOffPath = false
     self.originalPath = originalPath
     self.newPath = nil
-    self.finder = pathfinder(game.cells, 'ASTAR', walkable)
+    self.finder = pathfinder(game.cells, 'ASTAR', game.walkable)
     self.finder:setMode('ORTHOGONAL')
+    
+    self.width = 32
+    self.height = 32
     
     self.spriteSheet = spriteSheet
     if self.spriteSheet then
-      self.grid = anim8.newGrid(32, 32, spriteSheet:getWidth(), spriteSheet:getHeight())
+      self.grid = anim8.newGrid(self.width, self.height, spriteSheet:getWidth(), spriteSheet:getHeight())
       self.upAnim = anim8.newAnimation(self.grid('1-2', 1), game.dt*10) --TODO: variablize animation rate?
       self.downAnim = anim8.newAnimation(self.grid('1-2', 2), game.dt*10)
       self.leftAnim = anim8.newAnimation(self.grid(3, '1-2'), game.dt*10)
@@ -67,6 +70,7 @@ creep = class {
 -- update a creep object
   function creep:update(path)
     self_cellX, self_cellY = utils.coordToCell(self.x, self.y, game.cellSize)
+    print("current", self_cellX, self_cellY)
     lookNextCell = false
     isLastCell = false
     next_cellX, next_cellY = nil, nil
@@ -99,7 +103,8 @@ creep = class {
               break
             end
           end
-          self:move(next_cellX, next_cellY)
+          self:move(self_cellX, self_cellY, next_cellX, next_cellY)
+--          print(next_cellX, next_cellY)
         else 
           print ("creep is trapped")
           return false
@@ -117,41 +122,38 @@ creep = class {
   
   -- takes the cell size and next cell x,y of the creep and sets the creep x,y
   function creep:move(self_cellX, self_cellY, next_cellX, next_cellY)
-    next_coordX, next_coordY = utils.cellToCoord(next_cellX, next_cellY, game.cellSize)
-    self:updateDirection(self_cellX, self_cellY, next_cellX, next_cellY)
     
+    self:updateDirection(self_cellX, self_cellY, next_cellX, next_cellY)
     if self.direction == "right" then
-      self.x = self.x + self.speed
+      self.x = self.x + self.speed * 2
+      self.rightAnim:update(game.dt)
     elseif self.direction == "left" then
-      self.x = self.x - self.speed
-    elseif self.direction == "up" then
-      self.y = self.y - self.speed
+      self.x = self.x - self.speed * 2
+      self.leftAnim:update(game.dt)
     elseif self.direction == "down" then
-      self.y = self.y + self.speed
+      self.y = self.y + self.speed * 2
+      self.downAnim:update(game.dt)
+    elseif self.direction == "up" then
+      self.y = self.y - self.speed * 2 
+      self.upAnim:update(game.dt)
     end
   end
   
   function creep:updateDirection(self_cellX, self_cellY, next_cellX, next_cellY)
+    
+    next_coordX, next_coordY = utils.cellToCoord(next_cellX, next_cellY, game.cellSize)
+    
     if self.spriteSheet then
-      xDiffBigger = math.abs(self_cellX - next_cellX) - math.abs(self_cellY - next_cellY) > 0
-      if xDiffBigger then 
-        if self_cellX < next_cellX then 
-          self.direction = "right"
-          self.rightAnim:update(game.dt)
-        else
-          self.direction = "left"
-          self.leftAnim:update(game.dt)
-        end
-      else
-        if self_cellY > next_cellY then
-          self.direction = "up"
-          self.upAnim:update(game.dt)
-        else
-          self.direction = "down"
-          self.downAnim:update(game.dt)
-        end
+      if self_cellX < next_cellX and next_coordY + game.cellSize > self.y + self.height then
+        self.direction = "right"
+      elseif self_cellX > next_cellX and next_coordY + game.cellSize > self.y + self.height then
+        self.direction = "left"
+      elseif self_cellY < next_cellY and next_coordX + game.cellSize > self.x + self.width then
+        self.direction = "down"
+      elseif self_cellY > next_cellY and next_coordX + game.cellSize > self.x + self.width then
+        self.direction = "up"
       end
-    end
+    end    
   end
   
   -- draw creep object
