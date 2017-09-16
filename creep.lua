@@ -70,7 +70,6 @@ creep = class {
 -- update a creep object
   function creep:update(path)
     self_cellX, self_cellY = utils.coordToCell(self.x, self.y, game.cellSize)
-    print("current", self_cellX, self_cellY)
     lookNextCell = false
     isLastCell = false
     next_cellX, next_cellY = nil, nil
@@ -104,7 +103,6 @@ creep = class {
             end
           end
           self:move(self_cellX, self_cellY, next_cellX, next_cellY)
---          print(next_cellX, next_cellY)
         else 
           print ("creep is trapped")
           return false
@@ -134,7 +132,7 @@ creep = class {
       self.y = self.y + self.speed * 2
       self.downAnim:update(game.dt)
     elseif self.direction == "up" then
-      self.y = self.y - self.speed * 2 
+      self.y = self.y - self.speed * 2
       self.upAnim:update(game.dt)
     end
   end

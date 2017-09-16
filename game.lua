@@ -8,7 +8,12 @@ displayButtonInfoBox = -1,
 gameWidth = 0, gameHeight = 0, sideBarWidth = 0, sideBarHeight = 0,
 cellSize = 0, gridWidth = 0, gridHeight = 0,
 
-tilesetURL = "assets/terrain.png";
+tileset = nil,
+tilesetURL = "assets/terrain.png",
+tileWidth = 32, tileHeight = 32, 
+tilesetWidth = -1, tilesetHeight = -1,
+tilesetQuads = {},
+tileTable = {},
 
 dt = 0,
 
@@ -33,9 +38,11 @@ creepImageURLs = {"assets/blue-triangle.png", "assets/orange-star.png", "assets/
 creepTexts = {"bmg1", "ftr1", "avt1", "amg1"},
 
 towerList = {},
+towerImageURLs = {"assets/tower_basic.png"},
 towerUpdated = false,
 
-bulletList = {}
+bulletList = {},
+bulletImageURLs = {"assets/bullet_basic.png"}
 --end of declaring variables--
 }
 
@@ -92,6 +99,22 @@ function game:enter(arg)
     game.creepButtons[i]:setText(game.creepTexts[i])
     
   end
+  
+  -- setting up tileset
+  game.tileset = love.graphics.newImage(game.tilesetURL)
+  game.tilesetWidth = game.tileset:getWidth()
+  game.tilesetHeight = game.tileset:getHeight()
+  
+  quadInfo = {
+    { 0, 352 }, -- 1 - grass 1
+    { 32, 352 }, -- 2 - grass 2
+    { 64, 352 }, -- 3 - grass 3
+  }
+  for i, info in ipairs(quadInfo) do
+    -- info[1] = x, info[2] = y
+    game.tilesetQuads[i] = love.graphics.newQuad(info[1], info[2], game.tileWidth, game.tileHeight, game.tilesetWidth, game.tilesetHeight)
+  end
+  game.generateTileTable()
   
 end
 
@@ -232,6 +255,14 @@ function game:draw(dt)
       creepButton:drawInfoBox()
     end
   end
+  
+  --draw tiles--
+  for rowIndex,row in ipairs(game.tileTable) do
+    for columnIndex,number in ipairs(row) do
+      x, y = (columnIndex)*game.cellSize, (rowIndex-1)*game.cellSize
+      love.graphics.draw(game.tileset, game.tilesetQuads[number], x, y, game.cellSize/game.tileWidth, game.cellSize/game.tileHeight)
+    end
+  end
 
   --draw grid--
   --vertical lines--
@@ -244,28 +275,6 @@ function game:draw(dt)
     love.graphics.line(0, i, game.gameWidth, i)
   end
   
-  --draw towers--
-  love.graphics.setColor(255, 50, 50)
-  for j=1, game.gridHeight do
-    for i=1, game.gridWidth do
-      if game.map[j][i] == game.blocked then
-        coordX, coordY = utils.cellToCoord(i, j, game.cellSize)
-        
-        -- confirm that this grid contains a tower, mark with color
-        for k=#game.towerList, 1, -1 do
-          if game.towerList[k].x == j and game.towerList[k].y == i then
-            
-            -- print("found tower")
-            love.graphics.setColor(255, 0, 255)
-            break
-          end
-        
-        end
-        love.graphics.rectangle("fill", coordX, coordY, game.cellSize, game.cellSize)
-      end
-    end
-  end
-  
   --draw path--
   love.graphics.setColor(50, 255, 50)
   if game.path then
@@ -273,6 +282,11 @@ function game:draw(dt)
       coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
       love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
     end
+  end
+  
+  --draw towers--
+  for i, tower in ipairs(game.towerList) do
+    tower:draw()
   end
   
   --draw creeps--
@@ -308,7 +322,7 @@ end
 
 function game.generateCreep(creepSpriteSheet, dt)
   newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.path)
-  newCreep:setCoord(game.cellSize/2, game.cellSize/2)
+  newCreep:setCoord(game.cellSize/4, 0)
   table.insert(game.creepList, newCreep)
 end
 
@@ -329,10 +343,11 @@ function game.refreshCreeps()
   end
 end
 
-function game.generateTower(cellY, cellX)
+function game.generateTower(cellX, cellY)
 --  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 10, attackCapacity = 1, size = 2}))
-  towerN = tower(2,2,10,1,2)
+  towerN = tower(2,2,2,1,2)
   towerN:setCoord(cellX, cellY)
+  towerN:setSpriteSheet(love.graphics.newImage(game.towerImageURLs[1]))
   table.insert(game.towerList, towerN)
 end
 
@@ -359,19 +374,21 @@ function game.determineCreepsInRange(tower)
     local creepY = creep.y
     
     -- convert creep coordinates to grid cell coordinates
-    creepCellY, creepCellX = utils.coordToCell(creepX, creepY, game.cellSize)
+    creepCellX, creepCellY = utils.coordToCell(creepX, creepY, game.cellSize)
     
     --print("POSITIONS", x," ", y, " ", creepCellX, " ", creepCellY) 
     
     local distToTower = utils.dist(x,y,creepCellX,creepCellY)
-        
-    towerCoordX, towerCoordY = utils.cellToCoord(tower.x, tower.y, game.cellSize)  -- for bullet coordinates
+    
+    -- Jonathan: I've added these to be a persistent value in each tower class
+    --towerCoordX, towerCoordY = utils.cellToCoord(tower.x, tower.y, game.cellSize)  
     --print(towerCoordX, towerCoordY, creep.y, creep.x)
     
-    print("distToTower", distToTower)
+    --print("distToTower", distToTower)
     
     if distToTower <= tower.range then      
-      game.generateBullet(towerCoordX, towerCoordY, creep.x, creep.y)
+      game.generateBullet(tower.coordX + tower.width/2, tower.coordY + tower.height/2, creep.x, creep.y)
+      tower:updateDirection(creep.x, creep.y)
       tower:incrementOccupancy()  -- is there an easy way to increment in Lua?
       tower.hasFired = true
       tower.lastFired = 0
@@ -381,9 +398,9 @@ end
 
 function game.generateBullet(towerX, towerY, destX, destY)
 
-  bulletN = bullet(50,3)
+  bulletN = bullet(50,1)
   
-  bulletN:setOrigin(towerY, towerX)
+  bulletN:setOrigin(towerX, towerY)
   bulletN:setCourse(destX, destY)
   
   -- insert into bullet list -- 
@@ -396,6 +413,17 @@ function game.revertPath()
   game.map[game.prevCellY][game.prevCellX] = game.walkable
   print("Can't build blocking path")
   game.path = game.myFinder:getPath(game.startx, game.starty, game.endx, game.endy, false)
+end
+
+function game.generateTileTable()
+  
+  for j=1, game.gridHeight do
+    game.tileTable[j] = {}
+    for i=1, game.gridWidth do
+      game.tileTable[j][i] = math.random(1, #game.tilesetQuads)
+    end
+  end
+  
 end
 
 return game
