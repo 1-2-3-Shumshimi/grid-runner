@@ -22,7 +22,7 @@ walkable = 0, blocked = 10,
 
 cells = nil, myFinder = nil,
 
-startx = 1, starty = 1, endx = 1, endy = 1,
+playerTopX = 1, playerTopY = 1, playerBottomX = 1, playerBottomY = 1,
 prevCellX = 1, prevCellY = 1,
 path = nil,
 
@@ -67,14 +67,14 @@ function game:enter(arg)
   game.cells = grid(game.map)
   game.myFinder = pathfinder(game.cells, 'ASTAR', game.walkable)
   game.myFinder:setMode('ORTHOGONAL')
-  game.endx, game.endy = game.gridWidth, game.gridHeight
+  game.playerBottomX, game.playerBottomY = game.gridWidth, game.gridHeight
   
   -- so creeps can create their own mini paths --
 --  creep.cells = game.cells
 --  creep.cellSize = game.cellSize
   
   -- set initial path --
-  game.path = game.myFinder:getPath(game.startx, game.starty, game.endx, game.endy, false)
+  game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
   
   -- set up creep buttons --
   buttonCoordPointer = {x = game.gameWidth, y = 0}
@@ -193,7 +193,7 @@ function game:update(dt)
       game.mouseDisableCounter = 0
       game.mouseDisabled = true
       
-      game.path = game.myFinder:getPath(game.startx, game.starty, game.endx, game.endy, false)
+      game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
       if not game.path then
         game.revertPath()
       end
@@ -412,7 +412,7 @@ end
 function game.revertPath()
   game.map[game.prevCellY][game.prevCellX] = game.walkable
   print("Can't build blocking path")
-  game.path = game.myFinder:getPath(game.startx, game.starty, game.endx, game.endy, false)
+  game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
 end
 
 function game.generateTileTable()
