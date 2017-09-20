@@ -11,6 +11,7 @@ button = require('UI.button')
 creep = require('creep')
 tower = require('tower')
 bullet = require('bullet')
+player = require('player')
 
 --game states--
 game = require('game')

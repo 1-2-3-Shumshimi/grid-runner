@@ -4,8 +4,15 @@ bottom = 0
 player = class {
   init = function(self, topOrBottom, gameMap, HP, currency, name, towerSkin, creepSkin, defenseRating)
     
+    -- determine positions
     self.status = topOrBottom -- 1 = top, 0 = bottom half of gameboard
-    self.setBase(topOrBottom)
+    self.playerX = nil
+    self.playerY = nil
+    self.enemyX = nil
+    self.enemyY = nil
+    self.enemySpawnSiteX = nil
+    self.enemySpawnSiteY = nil
+    self:setBase(topOrBottom)
     
     self.HP = HP  -- TODO: determine standard (HP = 100?)
     self.name = name
@@ -14,6 +21,10 @@ player = class {
     self.currency = currency
     self.defenseRating = defenseRating -- resistance to creep damage
     
+    -- lists of objects
+    self.playerTowers = {}
+    self.playerBullets = {}
+    self.enemyCreeps = {} -- keep track of enemy's creeps on player's turf
     
     -- game map generation
     self.attackMap = {}
@@ -21,9 +32,11 @@ player = class {
     
     -- each player has its own pathfinder
     self.finder = pathfinder(game.cells, 'ASTAR', game.walkable)
-    --set initial path
+    self.finder:setMode('ORTHOGONAL')
     
-    self.path = self.finder:getPath(self.creepSpawnSiteX, self.creepSpawnSiteY, self.enemyX, self.enemyY, false)
+    --set initial path of enemy creeps to player's base
+    self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+    
   end
  }
   function player:hasLost()
@@ -92,17 +105,52 @@ player = class {
       self.enemyX = game.playerBottomX
       self.enemyY = game.playerBottomY
       
-      -- set up spawn site for creeps (on enemy player's half of board, aligned with player base
-      self.creepSpawnSiteX = self.playerX+6
-      self.creepSpawnSiteY = self.playerY
+      -- set up spawn site for enemy creeps (on player's half of board, aligned with enemy base
+      self.enemySpawnSiteX = self.enemyX - 6   -- TODO: define constant
+      self.enemySpawnSiteY = self.enemyY
       
     elseif status == bottom then
       self.playerX = game.playerBottomX
       self.playerY = game.playerBottomY
       self.enemyX = game.playerTopX
       self.enemyY = game.playerTopY
-      self.creepSpawnSiteX = self.playerX-6
-      self.creepSpawnSiteY = self.playerY
+      
+      self.enemySpawnSiteX = self.enemyX + 6  -- TODO: define constant
+      self.enemySpawnSiteY = self.enemyY
     end
   end
+  
+  function player:update(dt)
+    
+     --check for bullet collisions with enemy creeps or target destinations
+    for i, bulletN in ipairs(self.playerBullets) do
+      for j, creep in ipairs(self.enemyCreeps) do
+        if bulletN:checkBulletHitCreep(creep.x, creep.y, game.cellSize) then
+          -- damage creep health + remove bullet from list
+          print("creep", i, "takes damage; HP left: ", creep.HP)
+          creep:takeDamage(bulletN.damage)
+          if creep:isDead() then
+            table.remove(self.enemyCreeps, j)
+          end
+          table.remove(self.playerBullets, i)
+        elseif bulletN:checkBulletReachDest(game.cellSize) then
+          table.remove(self.playerBullets, i)
+        end
+      end
+    end
+    
+    --update enemy creep movement
+    for i, creep in ipairs(self.enemyCreeps) do
+      if creep:update(game.path) then
+        table.insert(game.creepLocations, {utils.coordToCell(creep.x, creep.y, game.cellSize)})
+      else
+        game.revertPath()   -- TODO: turn into player functions
+        game.refreshCreeps()  -- TODO: turn into player functions
+        break
+      end
+    end
+  end
+  
+  
+return player
   
