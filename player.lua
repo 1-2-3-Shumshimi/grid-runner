@@ -25,6 +25,7 @@ player = class {
     self.playerTowers = {}
     self.playerBullets = {}
     self.enemyCreeps = {} -- keep track of enemy's creeps on player's turf
+    self.enemyCreepLocations = {}
     
     -- game map generation
     self.attackMap = {}
@@ -35,7 +36,7 @@ player = class {
     self.finder:setMode('ORTHOGONAL')
     
     --set initial path of enemy creeps to player's base
-    self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+    self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false) 
     
   end
  }
@@ -70,11 +71,11 @@ player = class {
         self.attackMap[j] = {}
         if j <= (game.gridHeight/2) then
           for i=1,game.gridWidth do
-            game.map[j][i] = game.blocked
+            self.attackMap[j][i] = game.blocked
           end
         else
           for i=1,game.gridWidth do
-            game.map[j][i] = game.walkable
+            self.attackMap[j][i] = game.walkable
           end
         end
       end
@@ -85,11 +86,11 @@ player = class {
         self.attackMap[j] = {}
         if j <= (game.gridHeight/2) then
           for i=1,game.gridWidth do
-            game.map[j][i] = game.walkable
+            self.attackMap[j][i] = game.walkable
           end
         else
           for i=1,game.gridWidth do
-            game.map[j][i] = game.blocked
+            self.attackMap[j][i] = game.blocked
           end
         end
       end      
@@ -121,8 +122,9 @@ player = class {
   end
   
   function player:update(dt)
+
     
-     --check for bullet collisions with enemy creeps or target destinations
+     --(1/3) check for bullet collisions with enemy creeps or target destinations
     for i, bulletN in ipairs(self.playerBullets) do
       for j, creep in ipairs(self.enemyCreeps) do
         if bulletN:checkBulletHitCreep(creep.x, creep.y, game.cellSize) then
@@ -139,18 +141,140 @@ player = class {
       end
     end
     
-    --update enemy creep movement
+    --(2/3) update enemy creep movement
     for i, creep in ipairs(self.enemyCreeps) do
-      if creep:update(game.path) then
-        table.insert(game.creepLocations, {utils.coordToCell(creep.x, creep.y, game.cellSize)})
+      if creep:update(self.path) then
+        table.insert(self.enemyCreepLocations, {utils.coordToCell(creep.x, creep.y, game.cellSize)})
       else
         game.revertPath()   -- TODO: turn into player functions
         game.refreshCreeps()  -- TODO: turn into player functions
         break
       end
     end
+    
+    -- (3/3) determine whether any creeps will be attacked by towers--
+    for i, tower in ipairs(self.playerTowers) do
+      if not tower:isBusy() then
+        if not tower.hasFired then
+          self:determineCreepsInRange(tower)
+        elseif tower.lastFired >= tower.attackSpeed then
+          self:determineCreepsInRange(tower)
+        end
+      
+      -- reset attack occupancy of tower after setting targets -- 
+      tower:resetOccupancy()
+      tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
+      end
+    end
+    
+    
+    
   end
   
   
+  
+  function player:draw(dt)
+    --(#1) draw enemy creep path--
+    love.graphics.setColor(50, 255, 50)
+    if self.path then
+      for node in self.path:nodes() do
+        coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
+        love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
+      end
+    end
+    
+    --(#2) draw towers--
+    for i, tower in ipairs(self.playerTowers) do
+      tower:draw()
+    end
+    
+    --(#3) draw enemy creeps--
+    for i, creep in ipairs(self.enemyCreeps) do
+      creep:draw()
+    end
+    
+    --(#4) draw bullets --
+    love.graphics.setColor(255, 50, 50)
+    
+    for i=#self.playerBullets,1,-1 do
+      bulletN = self.playerBullets[i]
+      startX, startY, bulletDx, bulletDy = bulletN:computeTrajectory(bulletN.x, bulletN.y, bulletN.destX, bulletN.destY)
+
+      deltaTime = love.timer.getDelta()
+      bulletN:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
+     
+      love.graphics.circle("fill", bulletN.x, bulletN.y, game.cellSize/10)
+    end
+  end
+  
+  function player:generateTower()
+    towerN = tower(2,2,2,1,2)
+    towerN:setCoord(cellX, cellY)
+    towerN:setSpriteSheet(love.graphics.newImage(game.towerImageURLs[1]))
+    table.insert(self.playerTowers, towerN)
+  end
+  
+  function player:determineCreepsInRange(tower)
+    local x = tower.x
+    local y = tower.y
+  
+    for i, creep in ipairs(self.enemyCreeps) do
+      if tower:isBusy() then
+        print("tower is busy")
+        break
+      end
+    
+      local creepX = creep.x
+      local creepY = creep.y
+    
+      -- convert creep coordinates to grid cell coordinates
+      creepCellX, creepCellY = utils.coordToCell(creepX, creepY, game.cellSize)
+    
+      local distToTower = utils.dist(x,y,creepCellX,creepCellY)
+    
+      -- Jonathan: I've added these to be a persistent value in each tower class
+      --towerCoordX, towerCoordY = utils.cellToCoord(tower.x, tower.y, game.cellSize)  
+      --print(towerCoordX, towerCoordY, creep.y, creep.x)
+      
+      --print("distToTower", distToTower)
+    
+      if distToTower <= tower.range then      
+        self:generateBullet(tower.coordX + tower.width/2, tower.coordY + tower.height/2, creep.x, creep.y)
+        tower:updateDirection(creep.x, creep.y)
+        tower:incrementOccupancy()
+        tower.hasFired = true
+        tower.lastFired = 0
+      end
+    end
+  end
+
+  function player:generateBullet(towerX, towerY, destX, destY)
+
+    bulletN = bullet(50,1)
+    
+    bulletN:setOrigin(towerX, towerY)
+    bulletN:setCourse(destX, destY)
+    
+    -- insert into bullet list -- 
+    table.insert(self.playerBullets, bulletN)
+    
+  end
+
+  function player:generateCreep(creepSpriteSheet, dt)
+    newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, self.path)
+    newCreep:setCoord(game.cellSize/4, 0)
+    table.insert(self.enemyCreeps, newCreep)  
+  end
+  
+  function player:refreshCreeps()
+    game.creepUpdated = true
+    self.creepLocations = {}
+    for i=#self.enemyCreeps, 1, -1 do
+      if self.enemyCreeps[i]:isDead() or self.enemyCreeps[i].atEnd then
+        game.updateScore(self.enemyCreeps[i])
+        table.remove(self.enemyCreeps, i)
+      end
+    end
+  end
 return player
   

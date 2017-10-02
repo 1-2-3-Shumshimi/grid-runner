@@ -76,10 +76,6 @@ function game:enter(arg)
   -- set initial path --
   game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
   
-  
-  -- TEST
-  player1 = player(1, game.map, 100, 100, "king", 1, 1, 1)
-  
   -- set up creep buttons --
   buttonCoordPointer = {x = game.gameWidth, y = 0}
   for i, url in ipairs(game.creepImageURLs) do
