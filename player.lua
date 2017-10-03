@@ -37,6 +37,7 @@ player = class {
     
     --set initial path of enemy creeps to player's base
     self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false) 
+    self.noCreepInCell= true
     
   end
  }
@@ -167,7 +168,7 @@ player = class {
       end
     end
     
-    
+    self:refreshCreeps()
     
   end
   
@@ -268,13 +269,46 @@ player = class {
   
   function player:refreshCreeps()
     game.creepUpdated = true
-    self.creepLocations = {}
+    self.enemyCreeps = {}
     for i=#self.enemyCreeps, 1, -1 do
       if self.enemyCreeps[i]:isDead() or self.enemyCreeps[i].atEnd then
         game.updateScore(self.enemyCreeps[i])
         table.remove(self.enemyCreeps, i)
       end
     end
+  end
+  
+  function player:checkMoveValidity(cellX, cellY)
+    for i, coord in ipairs(self.enemyCreepLocations) do
+      if cellX == coord[1] and cellY == coord[2] then
+        self.noCreepInCell = false
+      end
+    end
+    if noCreepInCell then
+      --notice cellX and cellY are flipped to coincide with the pathfinder module
+      if self.map[cellY][cellX] == game.walkable then
+        self.map[cellY][cellX] = game.blocked
+        print("blocked cell (", cellX, cellY, ")")
+        print("generating tower")
+        self:generateTower(cellX, cellY)
+      else
+        self.map[cellY][cellX] = game.walkable
+      end
+      game.prevCellX, game.prevCellY = cellX, cellY --set the revert path mechanism
+      game.mouseDisableCounter = 0
+      game.mouseDisabled = true
+      
+      self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+      if not self.path then
+        self:revertPath()
+      end
+    end
+  end
+  
+  function player:revertPath()
+    self.map[game.prevCellY][game.prevCellX] = game.walkable
+    print("Can't build blocking path")
+    self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
   end
 return player
   

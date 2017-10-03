@@ -48,6 +48,8 @@ bulletImageURLs = {"assets/bullet_basic.png"}
 
 function game:enter(arg)
   
+
+  
   game.gameHeight = love.graphics.getHeight()
   game.gameWidth = (love.graphics.getWidth() * 4) / 5
   game.sideBarWidth = love.graphics.getWidth() / 5 -- let sidebar take 1/5 of the game window
@@ -73,8 +75,13 @@ function game:enter(arg)
 --  creep.cells = game.cells
 --  creep.cellSize = game.cellSize
   
-  -- set initial path --
-  game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
+  --instantiate player 1
+  print("generating player")
+  player1 = player(1,game.map,100,100,"boo",1,1,100)  
+
+-- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
+--  -- set initial path --
+--  game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
   
   -- set up creep buttons --
   buttonCoordPointer = {x = game.gameWidth, y = 0}
@@ -95,7 +102,7 @@ function game:enter(arg)
     end
     
     --function
-    game.creepButtons[i]:setHit(game.generateCreep)
+    game.creepButtons[i]:setHit(player1:generateCreep())
     game.creepButtons[i]:setText(game.creepTexts[i])
     
   end
@@ -116,10 +123,11 @@ function game:enter(arg)
   end
   game.generateTileTable()
   
+
+  
 end
 
 function game:update(dt)
-
   --easy way to exit game
   if love.keyboard.isDown('escape') then
     love.event.push('quit')
@@ -134,33 +142,36 @@ function game:update(dt)
 --    game.creepTimer = 0
 --    game.generateRandomCreep()
 --  end
+  
+  player1:update(dt)
 
-  --check for bullet collisions with creeps or target destinations
-  for i, bulletN in ipairs(game.bulletList) do
-    for j, creep in ipairs(game.creepList) do
-      if bulletN:checkBulletHitCreep(creep.x, creep.y, game.cellSize) then
-        -- damage creep health + remove bullet from list
-        print("creep", i, "takes damage; HP left: ", creep.HP)
-        creep:takeDamage(bulletN.damage)
-        if creep:isDead() then
-          table.remove(game.creepList, j)
-        end
-        table.remove(game.bulletList, i)
-      elseif bulletN:checkBulletReachDest(game.cellSize) then
-        table.remove(game.bulletList, i)
-      end
-    end
-  end
-  --update creeps
-  for i, creep in ipairs(game.creepList) do
-    if creep:update(game.path) then
-      table.insert(game.creepLocations, {utils.coordToCell(creep.x, creep.y, game.cellSize)})
-    else
-      game.revertPath()
-      game.refreshCreeps()
-      break
-    end
-  end
+-- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
+--  --check for bullet collisions with creeps or target destinations
+--  for i, bulletN in ipairs(game.bulletList) do
+--    for j, creep in ipairs(game.creepList) do
+--      if bulletN:checkBulletHitCreep(creep.x, creep.y, game.cellSize) then
+--        -- damage creep health + remove bullet from list
+--        print("creep", i, "takes damage; HP left: ", creep.HP)
+--        creep:takeDamage(bulletN.damage)
+--        if creep:isDead() then
+--          table.remove(game.creepList, j)
+--        end
+--        table.remove(game.bulletList, i)
+--      elseif bulletN:checkBulletReachDest(game.cellSize) then
+--        table.remove(game.bulletList, i)
+--      end
+--    end
+--  end
+--  --update creeps
+--  for i, creep in ipairs(game.creepList) do
+--    if creep:update(game.path) then
+--      table.insert(game.creepLocations, {utils.coordToCell(creep.x, creep.y, game.cellSize)})
+--    else
+--      game.revertPath()
+--      game.refreshCreeps()
+--      break
+--    end
+--  end
   
   --mouse actions
   mouseCoordX, mouseCoordY = love.mouse.getX(), love.mouse.getY()
@@ -169,35 +180,37 @@ function game:update(dt)
   if love.mouse.isDown(1) and not game.mouseDisabled and game.inGameArea(mouseCoordX, mouseCoordY) then
     
     cellX, cellY = utils.coordToCell(mouseCoordX, mouseCoordY, game.cellSize)
-    noCreepInCell = true
+    player1.noCreepInCell = true
     
-    --check to see if obstacle to be placed would be on top of a creep
-    --only build if it is not
-    for i, coord in ipairs(game.creepLocations) do
-      if cellX == coord[1] and cellY == coord[2] then
-        noCreepInCell = false
-      end
-    end
+    player1:checkMoveValidity(cellX, cellY)
     
-    if noCreepInCell then
-      --notice cellX and cellY are flipped to coincide with the pathfinder module
-      if game.map[cellY][cellX] == game.walkable then
-        game.map[cellY][cellX] = game.blocked
-        print("blocked cell (", cellX, cellY, ")")
-        print("generating tower")
-        game.generateTower(cellX, cellY)
-      else
-        game.map[cellY][cellX] = game.walkable
-      end
-      game.prevCellX, game.prevCellY = cellX, cellY --set the revert path mechanism
-      game.mouseDisableCounter = 0
-      game.mouseDisabled = true
+--    --check to see if obstacle to be placed would be on top of a creep
+--    --only build if it is not
+--    for i, coord in ipairs(game.creepLocations) do
+--      if cellX == coord[1] and cellY == coord[2] then
+--        noCreepInCell = false
+--      end
+--    end
+    
+--    if noCreepInCell then
+--      --notice cellX and cellY are flipped to coincide with the pathfinder module
+--      if game.map[cellY][cellX] == game.walkable then
+--        game.map[cellY][cellX] = game.blocked
+--        print("blocked cell (", cellX, cellY, ")")
+--        print("generating tower")
+--        game.generateTower(cellX, cellY)
+--      else
+--        game.map[cellY][cellX] = game.walkable
+--      end
+--      game.prevCellX, game.prevCellY = cellX, cellY --set the revert path mechanism
+--      game.mouseDisableCounter = 0
+--      game.mouseDisabled = true
       
-      game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
-      if not game.path then
-        game.revertPath()
-      end
-    end
+--      game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
+--      if not game.path then
+--        game.revertPath()
+--      end
+--    end
   end
   
   --sidebar mouse actions
@@ -215,20 +228,21 @@ function game:update(dt)
     end
   end
   
-  --determine whether any creeps will be attacked by towers--
-  for i, tower in ipairs(game.towerList) do
-    if not tower:isBusy() then
-      if not tower.hasFired then
-        game.determineCreepsInRange(tower)
-      elseif tower.lastFired >= tower.attackSpeed then
-        game.determineCreepsInRange(tower)
-      end
+-- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
+--  --determine whether any creeps will be attacked by towers--
+--  for i, tower in ipairs(game.towerList) do
+--    if not tower:isBusy() then
+--      if not tower.hasFired then
+--        game.determineCreepsInRange(tower)
+--      elseif tower.lastFired >= tower.attackSpeed then
+--        game.determineCreepsInRange(tower)
+--      end
     
-    -- reset attack occupancy of tower after setting targets -- 
-    tower:resetOccupancy()
-    tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
-    end
-  end
+--    -- reset attack occupancy of tower after setting targets -- 
+--    tower:resetOccupancy()
+--    tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
+--    end
+--  end
   
   --buffer time between mouse actions
   game.mouseDisableCounter = game.mouseDisableCounter + 1
@@ -237,11 +251,11 @@ function game:update(dt)
     game.mouseDisabled = false
   end
   
-  --reset creep-related variables--
-  game.refreshCreeps()
+--  --reset creep-related variables--
+--  game.refreshCreeps()
   
-  --reset tower items--
-  game.refreshTowers()
+--  --reset tower items--
+--  game.refreshTowers()
 
 end
 
@@ -275,44 +289,47 @@ function game:draw(dt)
     love.graphics.line(0, i, game.gameWidth, i)
   end
   
-  --draw path--
-  love.graphics.setColor(50, 255, 50)
-  if game.path then
-    for node in game.path:nodes() do
-      coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
-      love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
-    end
-  end
+  player1:draw(dt)
   
-  --draw towers--
-  for i, tower in ipairs(game.towerList) do
-    tower:draw()
-  end
-  
-  --draw creeps--
-  for i, creep in ipairs(game.creepList) do
-    creep:draw()
-  end
-  
-  -- draw bullets --
-  love.graphics.setColor(255, 50, 50)
-  
-  for i=#game.bulletList,1,-1 do
-    bulletN = game.bulletList[i]
-    startX, startY, bulletDx, bulletDy = bulletN:computeTrajectory(bulletN.x, bulletN.y, bulletN.destX, bulletN.destY)
-
-    deltaTime = love.timer.getDelta()
-    bulletN:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
-   
-    love.graphics.circle("fill", bulletN.x, bulletN.y, game.cellSize/10)
-    
-    -- bullet reaching destination, within error range
-    -- TODO: fine tune error box
---    if bulletN:checkBulletReachDest(game.cellSize) then
---      -- remove bullet from list
---      table.remove(game.bulletList, i)
+-- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
+--  --draw path--
+--  love.graphics.setColor(50, 255, 50)
+--  if game.path then
+--    for node in game.path:nodes() do
+--      coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
+--      love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
 --    end
-  end
+--  end
+  
+--  --draw towers--
+--  for i, tower in ipairs(game.towerList) do
+--    tower:draw()
+--  end
+  
+--  --draw creeps--
+--  for i, creep in ipairs(game.creepList) do
+--    creep:draw()
+--  end
+  
+--  -- draw bullets --
+--  love.graphics.setColor(255, 50, 50)
+  
+--  for i=#game.bulletList,1,-1 do
+--    bulletN = game.bulletList[i]
+--    startX, startY, bulletDx, bulletDy = bulletN:computeTrajectory(bulletN.x, bulletN.y, bulletN.destX, bulletN.destY)
+
+--    deltaTime = love.timer.getDelta()
+--    bulletN:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
+   
+--    love.graphics.circle("fill", bulletN.x, bulletN.y, game.cellSize/10)
+    
+--    -- bullet reaching destination, within error range
+--    -- TODO: fine tune error box
+----    if bulletN:checkBulletReachDest(game.cellSize) then
+----      -- remove bullet from list
+----      table.remove(game.bulletList, i)
+----    end
+--  end
   
 end
 

@@ -21,7 +21,7 @@ client = require('server/client') --jonathan: just POC
 function love.load()
     gamestate.registerEvents()
     gamestate.switch(game) --jonathan: uncomment this to play the game as is
-    print("switch to client") --jonathan: entry point to client/server POC
+--    print("switch to client") --jonathan: entry point to client/server POC
 --    gamestate.switch(client)
     --jonathan: remember that prior to running the client you have to first start up the server
     -- which can be done with the command "lua server/server.lua" from the directory of grid-runner
