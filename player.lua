@@ -28,16 +28,20 @@ player = class {
     self.enemyCreepLocations = {}
     
     -- game map generation
-    self.attackMap = {}
-    self.generateAttackMap(gameMap)
     
+    -- local copies of paths in the game
+    self.map = self:filterMapForPlayer(game.map)
+    self.myPath = nil
+    self.enemyPath = nil
+    
+    self.playerActionFlag = false
+    self.noCreepInCell= true
     -- each player has its own pathfinder
-    self.finder = pathfinder(game.cells, 'ASTAR', game.walkable)
-    self.finder:setMode('ORTHOGONAL')
+--    self.finder = pathfinder(game.cells, 'ASTAR', game.walkable)
+--    self.finder:setMode('ORTHOGONAL')
     
     --set initial path of enemy creeps to player's base
-    self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false) 
-    self.noCreepInCell= true
+--    self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
     
   end
  }
@@ -62,21 +66,22 @@ player = class {
     -- TODO: randomly generate ID for easier comparison (e.g. ID'ing creeps and towers)
   end
   
-  function player:generateAttackMap(gameMap)
+  function player:filterMapForPlayer(gameMap)
     -- copies game.map, but marks half the map as unwalkable
     -- done this way for flexibility - in case creeps would be allowed to traverse any part of map
     
+    attackMap = {}
     -- map population if player is on top half of screen
     if self.status == top then
       for j=1,game.gridHeight do
-        self.attackMap[j] = {}
+        attackMap[j] = {}
         if j <= (game.gridHeight/2) then
           for i=1,game.gridWidth do
-            self.attackMap[j][i] = game.blocked
+            attackMap[j][i] = gameMap[j][i]
           end
         else
           for i=1,game.gridWidth do
-            self.attackMap[j][i] = game.walkable
+            attackMap[j][i] = game.oppSide
           end
         end
       end
@@ -84,20 +89,21 @@ player = class {
     -- map population if player is on bottom half of screen
     elseif self.status == bottom then
       for j=1,game.gridHeight do
-        self.attackMap[j] = {}
+        attackMap[j] = {}
         if j <= (game.gridHeight/2) then
           for i=1,game.gridWidth do
-            self.attackMap[j][i] = game.walkable
+            attackMap[j][i] = game.oppSide
           end
         else
           for i=1,game.gridWidth do
-            self.attackMap[j][i] = game.blocked
+            attackMap[j][i] = gameMap[j][i]
           end
         end
       end      
     end
     
-    
+    return attackMap
+  
   end
   
   function player:setBase(status)
@@ -108,8 +114,8 @@ player = class {
       self.enemyY = game.playerBottomY
       
       -- set up spawn site for enemy creeps (on player's half of board, aligned with enemy base
-      self.enemySpawnSiteX = self.enemyX - 6   -- TODO: define constant
-      self.enemySpawnSiteY = self.enemyY
+      self.enemySpawnSiteX = self.enemyX   -- TODO: define constant
+      self.enemySpawnSiteY = self.enemyY - 6
       
     elseif status == bottom then
       self.playerX = game.playerBottomX
@@ -117,13 +123,31 @@ player = class {
       self.enemyX = game.playerTopX
       self.enemyY = game.playerTopY
       
-      self.enemySpawnSiteX = self.enemyX + 6  -- TODO: define constant
-      self.enemySpawnSiteY = self.enemyY
+      self.enemySpawnSiteX = self.enemyX  -- TODO: define constant
+      self.enemySpawnSiteY = self.enemyY + 6
     end
   end
   
+  function player:refreshMapAndPaths()
+    
+    if self.status == top then
+      self.myPath = game.player1Path
+      self.enemyPath = game.player2Path
+    elseif self.status == bottom then
+      self.myPath = game.player2Path
+      self.enemyPath = game.player1Path
+    end
+    
+    self.map = self:filterMapForPlayer(game.map)
+    
+  end
+  
   function player:update(dt)
-
+    
+    if self.playerActionFlag then
+      self:refreshMapAndPaths()
+      self.playerActionFlag = false
+    end
     
      --(1/3) check for bullet collisions with enemy creeps or target destinations
     for i, bulletN in ipairs(self.playerBullets) do
@@ -144,11 +168,12 @@ player = class {
     
     --(2/3) update enemy creep movement
     for i, creep in ipairs(self.enemyCreeps) do
-      if creep:update(self.path) then
+      if creep:update(self.myPath) then
         table.insert(self.enemyCreepLocations, {utils.coordToCell(creep.x, creep.y, game.cellSize)})
       else
-        game.revertPath()   -- TODO: turn into player functions
-        game.refreshCreeps()  -- TODO: turn into player functions
+        --1st revert path: when a creep is trapped
+        self:revertPath()   -- TODO: turn into player functions
+        self:refreshCreeps()
         break
       end
     end
@@ -175,14 +200,14 @@ player = class {
   
   
   function player:draw(dt)
-    --(#1) draw enemy creep path--
-    love.graphics.setColor(50, 255, 50)
-    if self.path then
-      for node in self.path:nodes() do
-        coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
-        love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
-      end
-    end
+--    --(#1) draw enemy creep path-- NOTE: jonathan: moved to game.lua
+--    love.graphics.setColor(255*self.status, 0, 150) --self.status changes path color based on player
+--    if self.path then
+--      for node in self.path:nodes() do
+--        coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
+--        love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
+--      end
+--    end
     
     --(#2) draw towers--
     for i, tower in ipairs(self.playerTowers) do
@@ -208,11 +233,19 @@ player = class {
     end
   end
   
-  function player:generateTower()
+  function player:generateTower(cellX, cellY)
     towerN = tower(2,2,2,1,2)
     towerN:setCoord(cellX, cellY)
     towerN:setSpriteSheet(love.graphics.newImage(game.towerImageURLs[1]))
     table.insert(self.playerTowers, towerN)
+  end
+  
+  function player:removeTower(cellX, cellY)
+    for i, tower in ipairs(self.playerTowers) do
+      if tower.x == cellX and tower.y == cellY then
+        table.remove(self.playerTowers, i)
+      end
+    end
   end
   
   function player:determineCreepsInRange(tower)
@@ -262,14 +295,29 @@ player = class {
   end
 
   function player:generateCreep(creepSpriteSheet, dt)
-    newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, self.path)
-    newCreep:setCoord(game.cellSize/4, 0)
-    table.insert(self.enemyCreeps, newCreep)  
+    
+    --insert creep to the OPPOSING player's enemyCreeps table
+    --thus, assign the creep the SELF player path to follow
+    if self.status == top then
+      newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.player2Path)
+      newCreepCoordX, newCreepCoordY = utils.cellToCoord(game.bottomEnemySpawnX, game.bottomEnemySpawnY, game.cellSize)
+      newCreep:setCoord(newCreepCoordX + game.cellSize/4, newCreepCoordY)
+      table.insert(game.player2.enemyCreeps, newCreep)
+      
+  elseif self.status == bottom then
+      newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.player1Path)
+      newCreepCoordX, newCreepCoordY = utils.cellToCoord(game.topEnemySpawnX, game.topEnemySpawnY, game.cellSize)
+      newCreep:setCoord(newCreepCoordX + game.cellSize/4, newCreepCoordY)
+      table.insert(game.player1.enemyCreeps, newCreep)
+    
+    else
+      print("Something went wrong with player status/topOrBottom")
+    end
   end
   
   function player:refreshCreeps()
     game.creepUpdated = true
-    self.enemyCreeps = {}
+    self.enemyCreepLocations = {}
     for i=#self.enemyCreeps, 1, -1 do
       if self.enemyCreeps[i]:isDead() or self.enemyCreeps[i].atEnd then
         game.updateScore(self.enemyCreeps[i])
@@ -279,36 +327,58 @@ player = class {
   end
   
   function player:checkMoveValidity(cellX, cellY)
+    --check if last cell
+    isLastCell = (cellX == game.bottomEnemySpawnX and cellY == game.bottomEnemySpawnY) or 
+                 (cellX == game.topEnemySpawnX and cellY == game.topEnemySpawnY)
+    
     for i, coord in ipairs(self.enemyCreepLocations) do
       if cellX == coord[1] and cellY == coord[2] then
         self.noCreepInCell = false
       end
     end
-    if noCreepInCell then
+    if self.noCreepInCell and not isLastCell then
       --notice cellX and cellY are flipped to coincide with the pathfinder module
       if self.map[cellY][cellX] == game.walkable then
-        self.map[cellY][cellX] = game.blocked
-        print("blocked cell (", cellX, cellY, ")")
-        print("generating tower")
+        game.map[cellY][cellX] = game.blocked
+        print("generating tower (", cellX, cellY, ")")
         self:generateTower(cellX, cellY)
-      else
-        self.map[cellY][cellX] = game.walkable
+      elseif self.map[cellY][cellX] == game.blocked then
+        game.map[cellY][cellX] = game.walkable
+        self:removeTower(cellX, cellY)
+        print("removing tower (", cellX, cellY, ")")
+      elseif self.map[cellY][cellX] == game.oppSide then
+        print("you cannot build on opponent side!")
       end
       game.prevCellX, game.prevCellY = cellX, cellY --set the revert path mechanism
       game.mouseDisableCounter = 0
       game.mouseDisabled = true
       
-      self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
-      if not self.path then
+      if self.status == top then
+        game.player1Path = game.myFinder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+      elseif self.status == bottom then
+        game.player2Path = game.myFinder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+      end
+      if not game.player1Path or not game.player2Path then
+        --2nd revert path: where the game path (from spawn point to base point) has been blocked
         self:revertPath()
       end
+      
+      --trigger map and path refresh next game update iteration
+      self.playerActionFlag = true
+      
     end
   end
   
   function player:revertPath()
-    self.map[game.prevCellY][game.prevCellX] = game.walkable
+    game.map[game.prevCellY][game.prevCellX] = game.walkable
+    self:removeTower(game.prevCellX, game.prevCellY)
     print("Can't build blocking path")
-    self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+    if self.status == top then
+      game.player1Path = game.myFinder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+    elseif self.status == bottom then
+      game.player2Path = game.myFinder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+    end
   end
+  
 return player
   

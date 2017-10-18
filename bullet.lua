@@ -46,7 +46,7 @@ function bullet:checkBulletReachDest(errorRange)
 end
 
 function bullet:checkBulletHitCreep(creepX, creepY, errorRange)
-  print(math.abs(self.x-creepX), math.abs(self.y-creepY), errorRange)
+--  print(math.abs(self.x-creepX), math.abs(self.y-creepY), errorRange)
   return math.abs(self.x-creepX) < errorRange and math.abs(self.y-creepY) < errorRange
 end
 return bullet

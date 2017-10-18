@@ -85,7 +85,7 @@ creep = class {
         end
       end
       
-      if isLastCell then 
+      if isLastCell then
         self:reachedEnd()
       elseif next_cellX and next_cellY then
         self:move(self_cellX, self_cellY, next_cellX, next_cellY)

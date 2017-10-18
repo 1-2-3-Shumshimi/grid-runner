@@ -18,13 +18,16 @@ tileTable = {},
 dt = 0,
 
 map = {},
-walkable = 0, blocked = 10,
+walkable = 0, blocked = 10, oppSide = 20,
 
 cells = nil, myFinder = nil,
 
+player1 = nil, player2 = nil,
+
 playerTopX = 1, playerTopY = 1, playerBottomX = 1, playerBottomY = 1,
+topEnemySpawnX, topEnemySpawnY = 1, bottomEnemySpawnX = 1, bottomEnemySpawnY = 1,
 prevCellX = 1, prevCellY = 1,
-path = nil,
+player1Path = nil, player2Path = nil,
 
 mouseDisabled = false,
 mouseDisabledMax = 10, mouseDisableCounter = 0,
@@ -48,8 +51,6 @@ bulletImageURLs = {"assets/bullet_basic.png"}
 
 function game:enter(arg)
   
-
-  
   game.gameHeight = love.graphics.getHeight()
   game.gameWidth = (love.graphics.getWidth() * 4) / 5
   game.sideBarWidth = love.graphics.getWidth() / 5 -- let sidebar take 1/5 of the game window
@@ -69,19 +70,24 @@ function game:enter(arg)
   game.cells = grid(game.map)
   game.myFinder = pathfinder(game.cells, 'ASTAR', game.walkable)
   game.myFinder:setMode('ORTHOGONAL')
+  
+  -- setting player base points
+  game.playerTopX, game.playerTopY = 1, 1
   game.playerBottomX, game.playerBottomY = game.gridWidth, game.gridHeight
   
-  -- so creeps can create their own mini paths --
---  creep.cells = game.cells
---  creep.cellSize = game.cellSize
+  game.topEnemySpawnX, game.topEnemySpawnY = game.playerBottomX, game.playerBottomY - 6
+  game.bottomEnemySpawnX, game.bottomEnemySpawnY = game.playerTopX, game.playerTopY + 6
   
-  --instantiate player 1
-  print("generating player")
-  player1 = player(1,game.map,100,100,"boo",1,1,100)  
+  --instantiate players
+  game.player1 = player(1,game.map,100,100,"boo",1,1,100)
+  game.player2 = player(0,game.map,100,100,"eww",1,1,100)
 
--- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
---  -- set initial path --
---  game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
+  --instantiate paths
+  game.player1Path = game.myFinder:getPath(game.player1.enemySpawnSiteX, game.player1.enemySpawnSiteY, game.player1.playerX, game.player1.playerY, false)
+  game.player2Path = game.myFinder:getPath(game.player2.enemySpawnSiteX, game.player2.enemySpawnSiteY, game.player2.playerX, game.player2.playerY, false)
+  
+  game.player1:refreshMapAndPaths() --players saving local copies of paths
+  game.player2:refreshMapAndPaths()
   
   -- set up creep buttons --
   buttonCoordPointer = {x = game.gameWidth, y = 0}
@@ -102,7 +108,12 @@ function game:enter(arg)
     end
     
     --function
-    game.creepButtons[i]:setHit(player1:generateCreep())
+--    print("generate creep ", player1:generateCreep())
+--    game.creepButtons[i]:setHit(player1:generateCreep())
+
+    --jonathan: this is currently set up with the vantage point that player 1 has the sidebar/buttons
+    --creeps are generated to player2's list
+    game.creepButtons[i]:setHit(game.player1.generateCreep)
     game.creepButtons[i]:setText(game.creepTexts[i])
     
   end
@@ -143,8 +154,13 @@ function game:update(dt)
 --    game.generateRandomCreep()
 --  end
   
-  player1:update(dt)
-
+  game.player1:update(dt)
+  
+  if useAIFlag then --update AI agent
+    agent:update()
+  end
+  game.player2:update(dt)
+  
 -- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
 --  --check for bullet collisions with creeps or target destinations
 --  for i, bulletN in ipairs(game.bulletList) do
@@ -178,11 +194,10 @@ function game:update(dt)
   
   --building tower mouse actions
   if love.mouse.isDown(1) and not game.mouseDisabled and game.inGameArea(mouseCoordX, mouseCoordY) then
-    
     cellX, cellY = utils.coordToCell(mouseCoordX, mouseCoordY, game.cellSize)
-    player1.noCreepInCell = true
+    game.player1.noCreepInCell = true
     
-    player1:checkMoveValidity(cellX, cellY)
+    game.player1:checkMoveValidity(cellX, cellY)
     
 --    --check to see if obstacle to be placed would be on top of a creep
 --    --only build if it is not
@@ -220,7 +235,7 @@ function game:update(dt)
       game.displayButtonInfoBox = i
       if love.mouse.isDown(1) and not game.mouseDisabled then
         --creepButton.hit(creepButton.image) commented out for testing purposes with line below
-        creepButton.hit(love.graphics.newImage("assets/"..game.creepTexts[i]..".png")) --NOT OPTIMAL TODO: FIX
+        creepButton.hit(game.player1, love.graphics.newImage("assets/"..game.creepTexts[i]..".png"), dt) --NOT OPTIMAL TODO: FIX
         game.mouseDisableCounter = 0
         game.mouseDisabled = true
       end
@@ -289,7 +304,14 @@ function game:draw(dt)
     love.graphics.line(0, i, game.gameWidth, i)
   end
   
-  player1:draw(dt)
+  --midline divider--
+  love.graphics.setColor(255, 50, 50)
+  love.graphics.line(0, game.gameHeight / 2, game.gameWidth, game.gameHeight / 2)
+  
+  self:drawPaths()
+  
+  game.player1:draw(dt)
+  game.player2:draw(dt)
   
 -- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
 --  --draw path--
@@ -337,11 +359,12 @@ function game.inGameArea(mouseX, mouseY)
   return mouseX < game.gameWidth and mouseY < game.gameHeight 
 end
 
-function game.generateCreep(creepSpriteSheet, dt)
-  newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.path)
-  newCreep:setCoord(game.cellSize/4, 0)
-  table.insert(game.creepList, newCreep)
-end
+--function game.generateCreep(creepSpriteSheet, dt)
+--  newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.path)
+----  newCreep:setCoord(game.cellSize/4, 0) --spawn point of the creep is now player specific
+
+--  table.insert(game.creepList, newCreep)
+--end
 
 --function game.generateRandomCreep()
 --  newCreep = creep(math.random(1,5)*100, math.random(1,5), nil, game.path)
@@ -426,11 +449,11 @@ function game.generateBullet(towerX, towerY, destX, destY)
 end
 
 -- change the previously entered cellX and cellY to walkable
-function game.revertPath()
-  game.map[game.prevCellY][game.prevCellX] = game.walkable
-  print("Can't build blocking path")
-  game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
-end
+--function game.revertPath()
+--  game.map[game.prevCellY][game.prevCellX] = game.walkable
+--  print("Can't build blocking path")
+--  game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
+--end
 
 function game.generateTileTable()
   
@@ -438,6 +461,28 @@ function game.generateTileTable()
     game.tileTable[j] = {}
     for i=1, game.gridWidth do
       game.tileTable[j][i] = math.random(1, #game.tilesetQuads)
+    end
+  end
+  
+end
+
+function game:drawPaths()
+  
+  love.graphics.setColor(255, 0, 150)
+  if self.player1Path then
+    for node in self.player1Path:nodes() do
+        coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
+        love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
+      
+    end
+  end
+  
+  love.graphics.setColor(150, 0, 255)
+  if self.player2Path then
+    for node in self.player2Path:nodes() do
+        coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
+        love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
+      
     end
   end
   

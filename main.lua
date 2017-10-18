@@ -18,6 +18,11 @@ player = require('player')
 game = require('game')
 client = require('server/client') --jonathan: just POC
 
+--AI/computer players--
+basicAgent = require('agents/basicAgent')
+useAIFlag = true --true if only one player playing, false otherwise
+agent = basicAgent() --change to play against different AIs
+
 function love.load()
     gamestate.registerEvents()
     gamestate.switch(game) --jonathan: uncomment this to play the game as is
