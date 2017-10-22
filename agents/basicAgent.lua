@@ -20,7 +20,7 @@ basicAgent = class {
 }
 
 function basicAgent:update()
-  if self.timer >= 100 then
+  if self.timer >= 500 then
     self:generateCreep()
     self:generateTower()
     self:setNextCoord()

@@ -1,94 +1,100 @@
 local game = {
-  
+
 --declaring variables--
-creepImages = {}, creepButtons = {},
-creepButtonPadding = 20,
-displayButtonInfoBox = -1,
+  creepImages = {}, creepButtons = {},
+  creepButtonPadding = 20,
+  displayButtonInfoBox = -1,
 
-gameWidth = 0, gameHeight = 0, sideBarWidth = 0, sideBarHeight = 0,
-cellSize = 0, gridWidth = 0, gridHeight = 0,
+  gameWidth = 0, gameHeight = 0, sideBarWidth = 0, sideBarHeight = 0,
+  cellSize = 0, gridWidth = 0, gridHeight = 0,
 
-tileset = nil,
-tilesetURL = "assets/terrain.png",
-tileWidth = 32, tileHeight = 32, 
-tilesetWidth = -1, tilesetHeight = -1,
-tilesetQuads = {},
-tileTable = {},
+  tileset = nil,
+  tilesetURL = "assets/terrain.png",
+  tileWidth = 32, tileHeight = 32, 
+  tilesetWidth = -1, tilesetHeight = -1,
+  tilesetQuads = {},
+  tileTable = {},
 
-dt = 0,
+  dt = 0,
 
-map = {},
-walkable = 0, blocked = 10, oppSide = 20,
+  initMap = {}, player1Map = {}, player2Map = {},
+  walkable = 0, blocked = 10, oppSide = 20,
 
-cells = nil, myFinder = nil,
+  player1Cells = nil, player2Cells = nil, 
+  player1Finder = nil, player2Finder = nil,
 
-player1 = nil, player2 = nil,
+  player1 = nil, player2 = nil,
 
-playerTopX = 1, playerTopY = 1, playerBottomX = 1, playerBottomY = 1,
-topEnemySpawnX, topEnemySpawnY = 1, bottomEnemySpawnX = 1, bottomEnemySpawnY = 1,
-prevCellX = 1, prevCellY = 1,
-player1Path = nil, player2Path = nil,
+  playerTopX = 1, playerTopY = 1, playerBottomX = 1, playerBottomY = 1,
+  topEnemySpawnX, topEnemySpawnY = 1, bottomEnemySpawnX = 1, bottomEnemySpawnY = 1,
+  prevCellX = 1, prevCellY = 1,
+  player1Path = nil, player2Path = nil,
 
-mouseDisabled = false,
-mouseDisabledMax = 10, mouseDisableCounter = 0,
+  mouseDisabled = false,
+  mouseDisabledMax = 10, mouseDisableCounter = 0,
 
-creepList = {},
-creepTimer = 0, creepTimerMax = 100, creepNumMax = 10,
-creepLocations = {},
-creepUpdated = true,
+  creepList = {},
+  creepTimer = 0, creepTimerMax = 100, creepNumMax = 10,
+  creepLocations = {},
+  creepUpdated = true,
 
-creepImageURLs = {"assets/blue-triangle.png", "assets/orange-star.png", "assets/yellow-diamond.png", "assets/teal-circle.png"},
-creepTexts = {"bmg1", "ftr1", "avt1", "amg1"},
+  creepImageURLs = {"assets/blue-triangle.png", "assets/orange-star.png", "assets/yellow-diamond.png", "assets/teal-circle.png"},
+  creepTexts = {"bmg1", "ftr1", "avt1", "amg1"},
 
-towerList = {},
-towerImageURLs = {"assets/tower_basic.png"},
-towerUpdated = false,
+  towerList = {},
+  towerImageURLs = {"assets/tower_basic.png"},
+  towerUpdated = false,
 
-bulletList = {},
-bulletImageURLs = {"assets/bullet_basic.png"}
+  bulletList = {},
+  bulletImageURLs = {"assets/bullet_basic.png"}
 --end of declaring variables--
 }
 
 function game:enter(arg)
-  
+
   game.gameHeight = love.graphics.getHeight()
   game.gameWidth = (love.graphics.getWidth() * 4) / 5
   game.sideBarWidth = love.graphics.getWidth() / 5 -- let sidebar take 1/5 of the game window
   game.sideBarHeight = love.graphics.getHeight()
-  
+
   game.cellSize = utils.findGCF(game.gameWidth, game.gameHeight) / 4
   game.gridWidth = game.gameWidth / game.cellSize
   game.gridHeight = game.gameHeight / game.cellSize
-  
+
   for j=1,game.gridHeight do
-    game.map[j] = {}
+    game.initMap[j] = {}
     for i=1,game.gridWidth do
-      game.map[j][i] = game.walkable
+      game.initMap[j][i] = game.walkable
     end
   end
-  
-  game.cells = grid(game.map)
-  game.myFinder = pathfinder(game.cells, 'ASTAR', game.walkable)
-  game.myFinder:setMode('ORTHOGONAL')
-  
+
+  game.player1Map, game.player2Map = game.filterMapForPlayer(game.initMap, true, true)
+
+  game.player1Cells = grid(game.player1Map)
+  game.player2Cells = grid(game.player2Map)
+  game.player1Finder = pathfinder(game.player1Cells, 'ASTAR', game.walkable)
+  game.player1Finder:setMode('ORTHOGONAL')
+  game.player2Finder = pathfinder(game.player2Cells, 'ASTAR', game.walkable)
+  game.player2Finder:setMode('ORTHOGONAL')
+
   -- setting player base points
   game.playerTopX, game.playerTopY = 1, 1
   game.playerBottomX, game.playerBottomY = game.gridWidth, game.gridHeight
-  
+
   game.topEnemySpawnX, game.topEnemySpawnY = game.playerBottomX, game.playerBottomY - 6
   game.bottomEnemySpawnX, game.bottomEnemySpawnY = game.playerTopX, game.playerTopY + 6
-  
+
   --instantiate players
-  game.player1 = player(1,game.map,100,100,"boo",1,1,100)
-  game.player2 = player(0,game.map,100,100,"eww",1,1,100)
+  game.player1 = player(1,game.player1Map,100,100,"boo",1,1,100)
+  game.player2 = player(0,game.player2Map,100,100,"eww",1,1,100)
 
   --instantiate paths
-  game.player1Path = game.myFinder:getPath(game.player1.enemySpawnSiteX, game.player1.enemySpawnSiteY, game.player1.playerX, game.player1.playerY, false)
-  game.player2Path = game.myFinder:getPath(game.player2.enemySpawnSiteX, game.player2.enemySpawnSiteY, game.player2.playerX, game.player2.playerY, false)
-  
+  game.player1Path = game.player1Finder:getPath(game.player1.enemySpawnSiteX, game.player1.enemySpawnSiteY, game.player1.playerX, game.player1.playerY, false)
+  game.player2Path = game.player2Finder:getPath(game.player2.enemySpawnSiteX, game.player2.enemySpawnSiteY, game.player2.playerX, game.player2.playerY, false)
+
   game.player1:refreshMapAndPaths() --players saving local copies of paths
   game.player2:refreshMapAndPaths()
-  
+
   -- set up creep buttons --
   buttonCoordPointer = {x = game.gameWidth, y = 0}
   for i, url in ipairs(game.creepImageURLs) do
@@ -97,7 +103,7 @@ function game:enter(arg)
     game.creepButtons[i] = button(1000)
     game.creepButtons[i]:setImage(game.creepImages[i])
     game.creepButtons[i]:setSize(game.sideBarWidth / 2 - game.creepButtonPadding, game.sideBarWidth / 2 - game.creepButtonPadding)
-    
+
     -- coord
     game.creepButtons[i]:setCoord(buttonCoordPointer.x + game.creepButtonPadding / 2, buttonCoordPointer.y + game.creepButtonPadding / 2)
     if buttonCoordPointer.x + game.creepButtons[i].width + game.creepButtonPadding < love.graphics.getWidth() then
@@ -106,7 +112,7 @@ function game:enter(arg)
       buttonCoordPointer.y = buttonCoordPointer.y + game.creepButtons[i].height + game.creepButtonPadding
       buttonCoordPointer.x = game.gameWidth
     end
-    
+
     --function
 --    print("generate creep ", player1:generateCreep())
 --    game.creepButtons[i]:setHit(player1:generateCreep())
@@ -115,14 +121,14 @@ function game:enter(arg)
     --creeps are generated to player2's list
     game.creepButtons[i]:setHit(game.player1.generateCreep)
     game.creepButtons[i]:setText(game.creepTexts[i])
-    
+
   end
-  
+
   -- setting up tileset
   game.tileset = love.graphics.newImage(game.tilesetURL)
   game.tilesetWidth = game.tileset:getWidth()
   game.tilesetHeight = game.tileset:getHeight()
-  
+
   quadInfo = {
     { 0, 352 }, -- 1 - grass 1
     { 32, 352 }, -- 2 - grass 2
@@ -133,9 +139,9 @@ function game:enter(arg)
     game.tilesetQuads[i] = love.graphics.newQuad(info[1], info[2], game.tileWidth, game.tileHeight, game.tilesetWidth, game.tilesetHeight)
   end
   game.generateTileTable()
-  
 
-  
+
+
 end
 
 function game:update(dt)
@@ -143,24 +149,24 @@ function game:update(dt)
   if love.keyboard.isDown('escape') then
     love.event.push('quit')
   end
-  
+
   --update game's dt variable to be used in animation
   game.dt = dt
-  
+
   --generate creep automatically
 --  game.creepTimer = game.creepTimer + 1
 --  if game.creepTimer > game.creepTimerMax and #game.creepList < game.creepNumMax then
 --    game.creepTimer = 0
 --    game.generateRandomCreep()
 --  end
-  
+
   game.player1:update(dt)
-  
+
   if useAIFlag then --update AI agent
     agent:update()
   end
   game.player2:update(dt)
-  
+
 -- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
 --  --check for bullet collisions with creeps or target destinations
 --  for i, bulletN in ipairs(game.bulletList) do
@@ -188,17 +194,17 @@ function game:update(dt)
 --      break
 --    end
 --  end
-  
+
   --mouse actions
   mouseCoordX, mouseCoordY = love.mouse.getX(), love.mouse.getY()
-  
+
   --building tower mouse actions
   if love.mouse.isDown(1) and not game.mouseDisabled and game.inGameArea(mouseCoordX, mouseCoordY) then
     cellX, cellY = utils.coordToCell(mouseCoordX, mouseCoordY, game.cellSize)
     game.player1.noCreepInCell = true
-    
+
     game.player1:checkMoveValidity(cellX, cellY)
-    
+
 --    --check to see if obstacle to be placed would be on top of a creep
 --    --only build if it is not
 --    for i, coord in ipairs(game.creepLocations) do
@@ -206,7 +212,7 @@ function game:update(dt)
 --        noCreepInCell = false
 --      end
 --    end
-    
+
 --    if noCreepInCell then
 --      --notice cellX and cellY are flipped to coincide with the pathfinder module
 --      if game.map[cellY][cellX] == game.walkable then
@@ -220,14 +226,14 @@ function game:update(dt)
 --      game.prevCellX, game.prevCellY = cellX, cellY --set the revert path mechanism
 --      game.mouseDisableCounter = 0
 --      game.mouseDisabled = true
-      
+
 --      game.path = game.myFinder:getPath(game.playerTopX, game.playerTopY, game.playerBottomX, game.playerBottomY, false)
 --      if not game.path then
 --        game.revertPath()
 --      end
 --    end
   end
-  
+
   --sidebar mouse actions
   game.displayButtonInfoBox = -1
   for i, creepButton in ipairs(game.creepButtons) do
@@ -242,7 +248,7 @@ function game:update(dt)
       break
     end
   end
-  
+
 -- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
 --  --determine whether any creeps will be attacked by towers--
 --  for i, tower in ipairs(game.towerList) do
@@ -252,30 +258,30 @@ function game:update(dt)
 --      elseif tower.lastFired >= tower.attackSpeed then
 --        game.determineCreepsInRange(tower)
 --      end
-    
+
 --    -- reset attack occupancy of tower after setting targets -- 
 --    tower:resetOccupancy()
 --    tower.lastFired = tower.lastFired + 0.05  -- TODO: variable-ize this constant
 --    end
 --  end
-  
+
   --buffer time between mouse actions
   game.mouseDisableCounter = game.mouseDisableCounter + 1
   if game.mouseDisableCounter > game.mouseDisabledMax and not love.mouse.isDown(1) then
     game.mouseDisableCounter = 0
     game.mouseDisabled = false
   end
-  
+
 --  --reset creep-related variables--
 --  game.refreshCreeps()
-  
+
 --  --reset tower items--
 --  game.refreshTowers()
 
 end
 
 function game:draw(dt)
-  
+
   --draw sidebar--
   love.graphics.setColor(255, 255, 255)
   for i, creepButton in ipairs(game.creepButtons) do
@@ -284,7 +290,7 @@ function game:draw(dt)
       creepButton:drawInfoBox()
     end
   end
-  
+
   --draw tiles--
   for rowIndex,row in ipairs(game.tileTable) do
     for columnIndex,number in ipairs(row) do
@@ -303,16 +309,16 @@ function game:draw(dt)
   for i=0, game.gameHeight, game.cellSize do
     love.graphics.line(0, i, game.gameWidth, i)
   end
-  
+
   --midline divider--
   love.graphics.setColor(255, 50, 50)
   love.graphics.line(0, game.gameHeight / 2, game.gameWidth, game.gameHeight / 2)
-  
+
   self:drawPaths()
-  
+
   game.player1:draw(dt)
   game.player2:draw(dt)
-  
+
 -- COMMENTED OUT TO TEST PLAYER FUNCTIONALITY
 --  --draw path--
 --  love.graphics.setColor(50, 255, 50)
@@ -322,29 +328,29 @@ function game:draw(dt)
 --      love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
 --    end
 --  end
-  
+
 --  --draw towers--
 --  for i, tower in ipairs(game.towerList) do
 --    tower:draw()
 --  end
-  
+
 --  --draw creeps--
 --  for i, creep in ipairs(game.creepList) do
 --    creep:draw()
 --  end
-  
+
 --  -- draw bullets --
 --  love.graphics.setColor(255, 50, 50)
-  
+
 --  for i=#game.bulletList,1,-1 do
 --    bulletN = game.bulletList[i]
 --    startX, startY, bulletDx, bulletDy = bulletN:computeTrajectory(bulletN.x, bulletN.y, bulletN.destX, bulletN.destY)
 
 --    deltaTime = love.timer.getDelta()
 --    bulletN:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
-   
+
 --    love.graphics.circle("fill", bulletN.x, bulletN.y, game.cellSize/10)
-    
+
 --    -- bullet reaching destination, within error range
 --    -- TODO: fine tune error box
 ----    if bulletN:checkBulletReachDest(game.cellSize) then
@@ -352,11 +358,53 @@ function game:draw(dt)
 ----      table.remove(game.bulletList, i)
 ----    end
 --  end
-  
+
 end
 
 function game.inGameArea(mouseX, mouseY)
   return mouseX < game.gameWidth and mouseY < game.gameHeight 
+end
+
+function game.filterMapForPlayer(gameMap, updatePlayer1Flag, updatePlayer2Flag)
+  -- copies game.map, but marks half the map as unwalkable
+  -- done this way for flexibility - in case creeps would be allowed to traverse any part of map
+
+  player1Map = {}
+  player2Map = {}
+  -- map population if player is on top half of screen
+  if updatePlayer1Flag then
+    for j=1,game.gridHeight do
+      player1Map[j] = {}
+      if j <= (game.gridHeight/2) then
+        for i=1,game.gridWidth do
+          player1Map[j][i] = gameMap[j][i]
+        end
+      else
+        for i=1,game.gridWidth do
+          player1Map[j][i] = game.oppSide
+        end
+      end
+    end
+  end
+
+  -- map population if player is on bottom half of screen
+  if updatePlayer2Flag then
+    for j=1,game.gridHeight do
+      player2Map[j] = {}
+      if j <= (game.gridHeight/2) then
+        for i=1,game.gridWidth do
+          player2Map[j][i] = game.oppSide
+        end
+      else
+        for i=1,game.gridWidth do
+          player2Map[j][i] = gameMap[j][i]
+        end
+      end
+    end      
+  end
+
+  return player1Map, player2Map
+
 end
 
 --function game.generateCreep(creepSpriteSheet, dt)
@@ -403,29 +451,29 @@ end
 function game.determineCreepsInRange(tower)
   local x = tower.x
   local y = tower.y
-  
+
   for i, creep in ipairs(game.creepList) do
     if tower:isBusy() then
       print("tower is busy")
       break
     end
-    
+
     local creepX = creep.x
     local creepY = creep.y
-    
+
     -- convert creep coordinates to grid cell coordinates
     creepCellX, creepCellY = utils.coordToCell(creepX, creepY, game.cellSize)
-    
+
     --print("POSITIONS", x," ", y, " ", creepCellX, " ", creepCellY) 
-    
+
     local distToTower = utils.dist(x,y,creepCellX,creepCellY)
-    
+
     -- Jonathan: I've added these to be a persistent value in each tower class
     --towerCoordX, towerCoordY = utils.cellToCoord(tower.x, tower.y, game.cellSize)  
     --print(towerCoordX, towerCoordY, creep.y, creep.x)
-    
+
     --print("distToTower", distToTower)
-    
+
     if distToTower <= tower.range then      
       game.generateBullet(tower.coordX + tower.width/2, tower.coordY + tower.height/2, creep.x, creep.y)
       tower:updateDirection(creep.x, creep.y)
@@ -439,13 +487,13 @@ end
 function game.generateBullet(towerX, towerY, destX, destY)
 
   bulletN = bullet(50,1)
-  
+
   bulletN:setOrigin(towerX, towerY)
   bulletN:setCourse(destX, destY)
-  
+
   -- insert into bullet list -- 
   table.insert(game.bulletList, bulletN)
-  
+
 end
 
 -- change the previously entered cellX and cellY to walkable
@@ -456,36 +504,36 @@ end
 --end
 
 function game.generateTileTable()
-  
+
   for j=1, game.gridHeight do
     game.tileTable[j] = {}
     for i=1, game.gridWidth do
       game.tileTable[j][i] = math.random(1, #game.tilesetQuads)
     end
   end
-  
+
 end
 
 function game:drawPaths()
-  
+
   love.graphics.setColor(255, 0, 150)
   if self.player1Path then
     for node in self.player1Path:nodes() do
-        coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
-        love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
-      
+      coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
+      love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
+
     end
   end
-  
+
   love.graphics.setColor(150, 0, 255)
   if self.player2Path then
     for node in self.player2Path:nodes() do
-        coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
-        love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
-      
+      coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
+      love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
+
     end
   end
-  
+
 end
 
 return game

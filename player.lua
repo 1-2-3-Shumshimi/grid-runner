@@ -30,7 +30,7 @@ player = class {
     -- game map generation
     
     -- local copies of paths in the game
-    self.map = self:filterMapForPlayer(game.map)
+    self.map = game.player1Map
     self.myPath = nil
     self.enemyPath = nil
     
@@ -66,46 +66,6 @@ player = class {
     -- TODO: randomly generate ID for easier comparison (e.g. ID'ing creeps and towers)
   end
   
-  function player:filterMapForPlayer(gameMap)
-    -- copies game.map, but marks half the map as unwalkable
-    -- done this way for flexibility - in case creeps would be allowed to traverse any part of map
-    
-    attackMap = {}
-    -- map population if player is on top half of screen
-    if self.status == top then
-      for j=1,game.gridHeight do
-        attackMap[j] = {}
-        if j <= (game.gridHeight/2) then
-          for i=1,game.gridWidth do
-            attackMap[j][i] = gameMap[j][i]
-          end
-        else
-          for i=1,game.gridWidth do
-            attackMap[j][i] = game.oppSide
-          end
-        end
-      end
-    
-    -- map population if player is on bottom half of screen
-    elseif self.status == bottom then
-      for j=1,game.gridHeight do
-        attackMap[j] = {}
-        if j <= (game.gridHeight/2) then
-          for i=1,game.gridWidth do
-            attackMap[j][i] = game.oppSide
-          end
-        else
-          for i=1,game.gridWidth do
-            attackMap[j][i] = gameMap[j][i]
-          end
-        end
-      end      
-    end
-    
-    return attackMap
-  
-  end
-  
   function player:setBase(status)
     if status == top then
       self.playerX = game.playerTopX
@@ -131,14 +91,14 @@ player = class {
   function player:refreshMapAndPaths()
     
     if self.status == top then
+      self.map = game.player1Map
       self.myPath = game.player1Path
       self.enemyPath = game.player2Path
     elseif self.status == bottom then
+      self.map = game.player2Map
       self.myPath = game.player2Path
       self.enemyPath = game.player1Path
     end
-    
-    self.map = self:filterMapForPlayer(game.map)
     
   end
   
@@ -297,15 +257,15 @@ player = class {
   function player:generateCreep(creepSpriteSheet, dt)
     
     --insert creep to the OPPOSING player's enemyCreeps table
-    --thus, assign the creep the SELF player path to follow
+    --thus, assign the creep the OPPOSING player path to follow
     if self.status == top then
-      newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.player2Path)
+      newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.player2Path, self.status)
       newCreepCoordX, newCreepCoordY = utils.cellToCoord(game.bottomEnemySpawnX, game.bottomEnemySpawnY, game.cellSize)
       newCreep:setCoord(newCreepCoordX + game.cellSize/4, newCreepCoordY)
       table.insert(game.player2.enemyCreeps, newCreep)
       
   elseif self.status == bottom then
-      newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.player1Path)
+      newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.player1Path, self.status)
       newCreepCoordX, newCreepCoordY = utils.cellToCoord(game.topEnemySpawnX, game.topEnemySpawnY, game.cellSize)
       newCreep:setCoord(newCreepCoordX + game.cellSize/4, newCreepCoordY)
       table.insert(game.player1.enemyCreeps, newCreep)
@@ -339,11 +299,11 @@ player = class {
     if self.noCreepInCell and not isLastCell then
       --notice cellX and cellY are flipped to coincide with the pathfinder module
       if self.map[cellY][cellX] == game.walkable then
-        game.map[cellY][cellX] = game.blocked
+        self:updateCellStatus(cellX, cellY, game.blocked)
         print("generating tower (", cellX, cellY, ")")
         self:generateTower(cellX, cellY)
       elseif self.map[cellY][cellX] == game.blocked then
-        game.map[cellY][cellX] = game.walkable
+        self:updateCellStatus(cellX, cellY, game.walkable)
         self:removeTower(cellX, cellY)
         print("removing tower (", cellX, cellY, ")")
       elseif self.map[cellY][cellX] == game.oppSide then
@@ -353,11 +313,7 @@ player = class {
       game.mouseDisableCounter = 0
       game.mouseDisabled = true
       
-      if self.status == top then
-        game.player1Path = game.myFinder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
-      elseif self.status == bottom then
-        game.player2Path = game.myFinder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
-      end
+      self:updatePathStatus()
       if not game.player1Path or not game.player2Path then
         --2nd revert path: where the game path (from spawn point to base point) has been blocked
         self:revertPath()
@@ -370,13 +326,25 @@ player = class {
   end
   
   function player:revertPath()
-    game.map[game.prevCellY][game.prevCellX] = game.walkable
+    self:updateCellStatus(game.prevCellX, game.prevCellY, game.walkable)
     self:removeTower(game.prevCellX, game.prevCellY)
     print("Can't build blocking path")
+    self:updatePathStatus()
+  end
+  
+  function player:updateCellStatus(cellX, cellY, status)
     if self.status == top then
-      game.player1Path = game.myFinder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+      game.player1Map[cellY][cellX] = status
     elseif self.status == bottom then
-      game.player2Path = game.myFinder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+      game.player2Map[cellY][cellX] = status
+    end
+  end
+  
+  function player:updatePathStatus()
+    if self.status == top then
+      game.player1Path = game.player1Finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
+    elseif self.status == bottom then
+      game.player2Path = game.player2Finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
     end
   end
   

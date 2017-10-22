@@ -1,5 +1,5 @@
 creep = class {
-  init = function(self, HP, speed, spriteSheet, originalPath)
+  init = function(self, HP, speed, spriteSheet, originalPath, playerOwner)
     self.HP = HP
     self.speed = speed
     self.x = 0
@@ -9,7 +9,11 @@ creep = class {
     self.recentlyOffPath = false
     self.originalPath = originalPath
     self.newPath = nil
-    self.finder = pathfinder(game.cells, 'ASTAR', game.walkable)
+    if playerOwner == top then
+      self.finder = pathfinder(game.player1Cells, 'ASTAR', game.walkable)
+    elseif playerOwner == bottom then
+      self.finder = pathfinder(game.player2Cells, 'ASTAR', game.walkable)
+    end
     self.finder:setMode('ORTHOGONAL')
     
     self.width = 32
