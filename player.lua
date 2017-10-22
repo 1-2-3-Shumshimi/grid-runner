@@ -27,8 +27,6 @@ player = class {
     self.enemyCreeps = {} -- keep track of enemy's creeps on player's turf
     self.enemyCreepLocations = {}
     
-    -- game map generation
-    
     -- local copies of paths in the game
     self.map = game.player1Map
     self.myPath = nil
@@ -36,12 +34,6 @@ player = class {
     
     self.playerActionFlag = false
     self.noCreepInCell= true
-    -- each player has its own pathfinder
---    self.finder = pathfinder(game.cells, 'ASTAR', game.walkable)
---    self.finder:setMode('ORTHOGONAL')
-    
-    --set initial path of enemy creeps to player's base
---    self.path = self.finder:getPath(self.enemySpawnSiteX, self.enemySpawnSiteY, self.playerX, self.playerY, false)
     
   end
  }
@@ -116,9 +108,6 @@ player = class {
           -- damage creep health + remove bullet from list
           print("creep", i, "takes damage; HP left: ", creep.HP)
           creep:takeDamage(bulletN.damage)
-          if creep:isDead() then
-            table.remove(self.enemyCreeps, j)
-          end
           table.remove(self.playerBullets, i)
         elseif bulletN:checkBulletReachDest(game.cellSize) then
           table.remove(self.playerBullets, i)
@@ -132,7 +121,7 @@ player = class {
         table.insert(self.enemyCreepLocations, {utils.coordToCell(creep.x, creep.y, game.cellSize)})
       else
         --1st revert path: when a creep is trapped
-        self:revertPath()   -- TODO: turn into player functions
+        self:revertPath()
         self:refreshCreeps()
         break
       end
@@ -157,29 +146,19 @@ player = class {
     
   end
   
-  
-  
   function player:draw(dt)
---    --(#1) draw enemy creep path-- NOTE: jonathan: moved to game.lua
---    love.graphics.setColor(255*self.status, 0, 150) --self.status changes path color based on player
---    if self.path then
---      for node in self.path:nodes() do
---        coordX, coordY = utils.cellToCoord(node:getX(), node:getY(), game.cellSize)
---        love.graphics.circle("fill", coordX + game.cellSize/2, coordY + game.cellSize/2, game.cellSize/8, game.cellSize/8)
---      end
---    end
     
-    --(#2) draw towers--
+    -- draw towers--
     for i, tower in ipairs(self.playerTowers) do
       tower:draw()
     end
     
-    --(#3) draw enemy creeps--
+    -- draw enemy creeps--
     for i, creep in ipairs(self.enemyCreeps) do
       creep:draw()
     end
     
-    --(#4) draw bullets --
+    -- draw bullets --
     love.graphics.setColor(255, 50, 50)
     
     for i=#self.playerBullets,1,-1 do
@@ -226,12 +205,6 @@ player = class {
     
       local distToTower = utils.dist(x,y,creepCellX,creepCellY)
     
-      -- Jonathan: I've added these to be a persistent value in each tower class
-      --towerCoordX, towerCoordY = utils.cellToCoord(tower.x, tower.y, game.cellSize)  
-      --print(towerCoordX, towerCoordY, creep.y, creep.x)
-      
-      --print("distToTower", distToTower)
-    
       if distToTower <= tower.range then      
         self:generateBullet(tower.coordX + tower.width/2, tower.coordY + tower.height/2, creep.x, creep.y)
         tower:updateDirection(creep.x, creep.y)
@@ -259,13 +232,13 @@ player = class {
     --insert creep to the OPPOSING player's enemyCreeps table
     --thus, assign the creep the OPPOSING player path to follow
     if self.status == top then
-      newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.player2Path, self.status)
+      newCreep = creep(math.random(1,5)*100, 0.5, 1, creepSpriteSheet, game.player2Path, bottom)
       newCreepCoordX, newCreepCoordY = utils.cellToCoord(game.bottomEnemySpawnX, game.bottomEnemySpawnY, game.cellSize)
       newCreep:setCoord(newCreepCoordX + game.cellSize/4, newCreepCoordY)
       table.insert(game.player2.enemyCreeps, newCreep)
       
   elseif self.status == bottom then
-      newCreep = creep(math.random(1,5)*100, 0.5, creepSpriteSheet, game.player1Path, self.status)
+      newCreep = creep(math.random(1,5)*100, 0.5, 1, creepSpriteSheet, game.player1Path, top)
       newCreepCoordX, newCreepCoordY = utils.cellToCoord(game.topEnemySpawnX, game.topEnemySpawnY, game.cellSize)
       newCreep:setCoord(newCreepCoordX + game.cellSize/4, newCreepCoordY)
       table.insert(game.player1.enemyCreeps, newCreep)
@@ -279,10 +252,18 @@ player = class {
     game.creepUpdated = true
     self.enemyCreepLocations = {}
     for i=#self.enemyCreeps, 1, -1 do
-      if self.enemyCreeps[i]:isDead() or self.enemyCreeps[i].atEnd then
-        game.updateScore(self.enemyCreeps[i])
+      if self.enemyCreeps[i]:isDead() then
+        self.currency = self.currency + self.enemyCreeps[i].bounty
         table.remove(self.enemyCreeps, i)
+        print("currency for player "..self.status.." is "..self.currency)
+      elseif self.enemyCreeps[i].atEnd then
+        self.HP = self.HP - 1
+        table.remove(self.enemyCreeps, i)
+        print("hp for player "..self.status.." is "..self.HP)
       end
+      
+--      game.updateScore(self.enemyCreeps[i]) --jonathan: making score updates player-side
+        
     end
   end
   

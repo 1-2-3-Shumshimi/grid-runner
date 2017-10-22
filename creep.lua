@@ -1,7 +1,8 @@
 creep = class {
-  init = function(self, HP, speed, spriteSheet, originalPath, playerOwner)
+  init = function(self, HP, speed, bounty, spriteSheet, originalPath, playerOwner)
     self.HP = HP
     self.speed = speed
+    self.bounty = bounty
     self.x = 0
     self.y = 0
     

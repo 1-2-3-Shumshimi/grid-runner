@@ -1,8 +1,6 @@
 -- from https://love2d.org/wiki/Tutorial:Fire_Toward_Mouse
 
--- TO-DO: inherit some properties of the tower class?
-Class = require "hump.class"
-bullet = Class {
+bullet = class {
   init = function(self, damage, speed)
     self.damage = damage
     self.speed = speed
@@ -14,8 +12,8 @@ bullet = Class {
 }
 
 function bullet:update()
-  
-  
+
+
 end
 
 function bullet:setOrigin(towerX, towerY)
@@ -32,12 +30,12 @@ function bullet:setCoord(intermedX, intermedY)
 end
 
 function bullet:computeTrajectory(startX, startY, endX, endY)
- 
+
   local angle = math.atan2((endY - startY), (endX - startX))
- 
+
   local bulletDx = self.speed * 2000 * math.cos(angle) -- TODO: variable-ize constant
   local bulletDy = self.speed * 2000 * math.sin(angle)
- 
+
   return startX, startY, bulletDx, bulletDy
 end
 
