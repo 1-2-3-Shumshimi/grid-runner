@@ -2,8 +2,10 @@ local game = {
 
 --declaring variables--
   creepImages = {}, creepButtons = {},
-  creepButtonPadding = 20,
-  displayButtonInfoBox = -1,
+  towerImages = {}, towerButtons = {},
+  buttonPadding = 9,
+  displayCreepButtonInfo = -1,
+  displayTowerButtonInfo = -1,
 
   gameWidth = 0, gameHeight = 0, sideBarWidth = 0, sideBarHeight = 0,
   cellSize = 0, gridWidth = 0, gridHeight = 0,
@@ -38,11 +40,12 @@ local game = {
   creepLocations = {},
   creepUpdated = true,
 
-  creepImageURLs = {"assets/blue-triangle.png", "assets/orange-star.png", "assets/yellow-diamond.png", "assets/teal-circle.png"},
+  creepImageURLs = {"bmg1.png", "ftr1.png", "avt1.png", "amg1.png"},
   creepTexts = {"bmg1", "ftr1", "avt1", "amg1"},
 
   towerList = {},
-  towerImageURLs = {"assets/tower_basic.png"},
+  towerImageURLs = {"tower_basic.png"},
+  towerTexts = {"the basic tower"},
   towerUpdated = false,
 
   bulletList = {},
@@ -99,17 +102,18 @@ function game:enter(arg)
   buttonCoordPointer = {x = game.gameWidth, y = 0}
   for i, url in ipairs(game.creepImageURLs) do
     -- image
-    game.creepImages[i] = love.graphics.newImage(url)
+    game.creepImages[i] = love.graphics.newImage("assets/icons/"..url)
     game.creepButtons[i] = button(1000)
     game.creepButtons[i]:setImage(game.creepImages[i])
-    game.creepButtons[i]:setSize(game.sideBarWidth / 2 - game.creepButtonPadding, game.sideBarWidth / 2 - game.creepButtonPadding)
+    game.creepButtons[i]:setSize(game.sideBarWidth / 3 - game.buttonPadding / 2, game.sideBarWidth / 3 - game.buttonPadding / 2)
 
     -- coord
-    game.creepButtons[i]:setCoord(buttonCoordPointer.x + game.creepButtonPadding / 2, buttonCoordPointer.y + game.creepButtonPadding / 2)
-    if buttonCoordPointer.x + game.creepButtons[i].width + game.creepButtonPadding < love.graphics.getWidth() then
-      buttonCoordPointer.x = buttonCoordPointer.x + game.creepButtons[i].width + game.creepButtonPadding
+    game.creepButtons[i]:setCoord(buttonCoordPointer.x + game.buttonPadding / 2, buttonCoordPointer.y + game.buttonPadding / 2)
+    print(game.creepButtons[i].x..", "..game.creepButtons[i].y)
+    if buttonCoordPointer.x + game.creepButtons[i].width + game.buttonPadding < love.graphics.getWidth() then
+      buttonCoordPointer.x = buttonCoordPointer.x + game.creepButtons[i].width + game.buttonPadding / 2
     else
-      buttonCoordPointer.y = buttonCoordPointer.y + game.creepButtons[i].height + game.creepButtonPadding
+      buttonCoordPointer.y = buttonCoordPointer.y + game.creepButtons[i].height + game.buttonPadding / 2
       buttonCoordPointer.x = game.gameWidth
     end
 
@@ -118,6 +122,31 @@ function game:enter(arg)
     game.creepButtons[i]:setHit(game.player1.generateCreep)
     game.creepButtons[i]:setText(game.creepTexts[i])
 
+  end
+  
+  -- set up tower buttons --
+  buttonCoordPointer.x = game.gameWidth
+  buttonCoordPointer.y = buttonCoordPointer.y + game.creepButtons[1].height + game.buttonPadding * 2
+  for i, url in ipairs(game.towerImageURLs) do 
+    -- image
+    game.towerImages[i] = love.graphics.newImage("assets/icons/"..url)
+    game.towerButtons[i] = button(1000)
+    game.towerButtons[i]:setImage(game.towerImages[i])
+    game.towerButtons[i]:setSize(game.sideBarWidth / 3 - game.buttonPadding, game.sideBarWidth / 3 - game.buttonPadding)
+    
+    -- coord
+    game.towerButtons[i]:setCoord(buttonCoordPointer.x + game.buttonPadding / 3, buttonCoordPointer.y + game.buttonPadding / 3)
+    print(game.towerButtons[i].x..", "..game.towerButtons[i].y)
+    if buttonCoordPointer.x + game.towerButtons[i].width + game.buttonPadding < love.graphics.getWidth() then
+      buttonCoordPointer.x = buttonCoordPointer.x + game.towerButtons[i].width + game.buttonPadding
+    else
+      buttonCoordPointer.y = buttonCoordPointer.y + game.towerButtons[i].height + game.buttonPadding
+      buttonCoordPointer.x = game.gameWidth
+    end
+    
+    game.towerButtons[i]:setHit(game.setTowerInfo)
+    game.towerButtons[i]:setText(game.towerTexts[i])
+    
   end
 
   -- setting up tileset
@@ -159,21 +188,34 @@ function game:update(dt)
 
   --building tower mouse actions
   if love.mouse.isDown(1) and not game.mouseDisabled and game.inGameArea(mouseCoordX, mouseCoordY) then
-    cellX, cellY = utils.coordToCell(mouseCoordX, mouseCoordY, game.cellSize)
-    game.player1.noCreepInCell = true
+    if game.displayTowerButtonInfo ~= -1 then
+      cellX, cellY = utils.coordToCell(mouseCoordX, mouseCoordY, game.cellSize)
+      game.player1.noCreepInCell = true
 
-    game.player1:checkMoveValidity(cellX, cellY)
+      game.player1:checkMoveValidity(cellX, cellY)
+    end
   
   end
 
   --sidebar mouse actions
-  game.displayButtonInfoBox = -1
+  game.displayCreepButtonInfo = -1
   for i, creepButton in ipairs(game.creepButtons) do
     if creepButton:onButton(mouseCoordX, mouseCoordY) then
-      game.displayButtonInfoBox = i
+      game.displayCreepButtonInfo = i
       if love.mouse.isDown(1) and not game.mouseDisabled then
         --creepButton.hit(creepButton.image) commented out for testing purposes with line below
-        creepButton.hit(game.player1, love.graphics.newImage("assets/"..game.creepTexts[i]..".png"), dt) --NOT OPTIMAL TODO: FIX
+        creepButton.hit(game.player1, love.graphics.newImage("assets/"..game.creepImageURLs[i]), dt) --NOT OPTIMAL TODO: FIX
+        game.mouseDisableCounter = 0
+        game.mouseDisabled = true
+      end
+      break
+    end
+  end
+  
+  for i, towerButton in ipairs(game.towerButtons) do
+    if towerButton:onButton(mouseCoordX, mouseCoordY) then
+      if love.mouse.isDown(1) and not game.mouseDisabled then
+        towerButton.hit(i)
         game.mouseDisableCounter = 0
         game.mouseDisabled = true
       end
@@ -196,8 +238,14 @@ function game:draw(dt)
   love.graphics.setColor(255, 255, 255)
   for i, creepButton in ipairs(game.creepButtons) do
     creepButton:draw()
-    if (game.displayButtonInfoBox == i) then
+    if (game.displayCreepButtonInfo == i) then
       creepButton:drawInfoBox()
+    end
+  end
+  for i, towerButton in ipairs(game.towerButtons) do
+    towerButton:draw()
+    if (game.displayTowerButtonInfo == i) then
+      towerButton:drawInfoBox()
     end
   end
 
@@ -277,11 +325,19 @@ function game.filterMapForPlayer(gameMap, updatePlayer1Flag, updatePlayer2Flag)
 
 end
 
+function game.setTowerInfo(index)
+  if game.displayTowerButtonInfo == index then
+    game.displayTowerButtonInfo = -1
+  else
+    game.displayTowerButtonInfo = index
+  end
+end
+
 function game.generateTower(cellX, cellY)
 --  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 10, attackCapacity = 1, size = 2}))
   towerN = tower(2,2,2,1,2)
   towerN:setCoord(cellX, cellY)
-  towerN:setSpriteSheet(love.graphics.newImage(game.towerImageURLs[1]))
+  towerN:setSpriteSheet(love.graphics.newImage("assets/"..game.towerImageURLs[1]))
   table.insert(game.towerList, towerN)
 end
 

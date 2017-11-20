@@ -175,7 +175,7 @@ player = class {
   function player:generateTower(cellX, cellY)
     towerN = tower(2,2,2,1,2)
     towerN:setCoord(cellX, cellY)
-    towerN:setSpriteSheet(love.graphics.newImage(game.towerImageURLs[1]))
+    towerN:setSpriteSheet(love.graphics.newImage("assets/"..game.towerImageURLs[1]))
     table.insert(self.playerTowers, towerN)
   end
   
