@@ -1,6 +1,4 @@
-Class = require "hump.class"
-
-tower = Class{
+tower = class{
   init = function(self, attackSpeed, damage, range, attackCapacity, size)
     self.attackSpeed = attackSpeed
     self.damage = damage

@@ -261,9 +261,6 @@ player = class {
         table.remove(self.enemyCreeps, i)
         print("hp for player "..self.status.." is "..self.HP)
       end
-      
---      game.updateScore(self.enemyCreeps[i]) --jonathan: making score updates player-side
-        
     end
   end
   

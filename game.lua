@@ -1,6 +1,8 @@
 local game = {
 
 --declaring variables--
+  player1Card = {name = nil, hp = nil, currency = nil},
+  player2Card = {name = nil, hp = nil, currency = nil},
   creepImages = {}, creepButtons = {},
   towerImages = {}, towerButtons = {},
   buttonPadding = 9,
@@ -33,7 +35,7 @@ local game = {
   player1Path = nil, player2Path = nil,
 
   mouseDisabled = false,
-  mouseDisabledMax = 10, mouseDisableCounter = 0,
+  mouseDisabledMax = 25, mouseDisableCounter = 0,
 
   creepList = {},
   creepTimer = 0, creepTimerMax = 100, creepNumMax = 10,
@@ -88,8 +90,8 @@ function game:enter(arg)
   game.bottomEnemySpawnX, game.bottomEnemySpawnY = game.playerTopX, game.playerTopY + 6
 
   --instantiate players
-  game.player1 = player(1,game.player1Map,100,100,"boo",1,1,100)
-  game.player2 = player(0,game.player2Map,100,100,"eww",1,1,100)
+  game.player1 = player(1,game.player1Map,100,100,"Astro",1,1,100)
+  game.player2 = player(0,game.player2Map,100,100,"Beyónce",1,1,100)
 
   --instantiate paths
   game.player1Path = game.player1Finder:getPath(game.player1.enemySpawnSiteX, game.player1.enemySpawnSiteY, game.player1.playerX, game.player1.playerY, false)
@@ -99,7 +101,7 @@ function game:enter(arg)
   game.player2:refreshMapAndPaths()
 
   -- set up creep buttons --
-  buttonCoordPointer = {x = game.gameWidth, y = 0}
+  buttonCoordPointer = {x = game.gameWidth, y = game.buttonPadding}
   for i, url in ipairs(game.creepImageURLs) do
     -- image
     game.creepImages[i] = love.graphics.newImage("assets/icons/"..url)
@@ -109,7 +111,6 @@ function game:enter(arg)
 
     -- coord
     game.creepButtons[i]:setCoord(buttonCoordPointer.x + game.buttonPadding / 2, buttonCoordPointer.y + game.buttonPadding / 2)
-    print(game.creepButtons[i].x..", "..game.creepButtons[i].y)
     if buttonCoordPointer.x + game.creepButtons[i].width + game.buttonPadding < love.graphics.getWidth() then
       buttonCoordPointer.x = buttonCoordPointer.x + game.creepButtons[i].width + game.buttonPadding / 2
     else
@@ -126,7 +127,7 @@ function game:enter(arg)
   
   -- set up tower buttons --
   buttonCoordPointer.x = game.gameWidth
-  buttonCoordPointer.y = buttonCoordPointer.y + game.creepButtons[1].height + game.buttonPadding * 2
+  buttonCoordPointer.y = buttonCoordPointer.y + game.creepButtons[1].height + game.buttonPadding * 3
   for i, url in ipairs(game.towerImageURLs) do 
     -- image
     game.towerImages[i] = love.graphics.newImage("assets/icons/"..url)
@@ -136,7 +137,6 @@ function game:enter(arg)
     
     -- coord
     game.towerButtons[i]:setCoord(buttonCoordPointer.x + game.buttonPadding / 3, buttonCoordPointer.y + game.buttonPadding / 3)
-    print(game.towerButtons[i].x..", "..game.towerButtons[i].y)
     if buttonCoordPointer.x + game.towerButtons[i].width + game.buttonPadding < love.graphics.getWidth() then
       buttonCoordPointer.x = buttonCoordPointer.x + game.towerButtons[i].width + game.buttonPadding
     else
@@ -148,6 +148,16 @@ function game:enter(arg)
     game.towerButtons[i]:setText(game.towerTexts[i])
     
   end
+  
+  -- set up player names, currency, and lives display
+  statsCoordPointer = {x = game.gameWidth + game.buttonPadding, y = buttonCoordPointer.y + game.towerButtons[1].height + game.buttonPadding * 3}
+  game.player1Card.name = textbox("Player 1: ", game.player1.name, statsCoordPointer.x, statsCoordPointer.y)
+  game.player1Card.HP = textbox("HP: ", game.player1.HP, statsCoordPointer.x, statsCoordPointer.y + game.buttonPadding * 2)
+  game.player1Card.currency = textbox("Currency: ", game.player1.currency, statsCoordPointer.x, statsCoordPointer.y + game.buttonPadding * 4)
+  statsCoordPointer.y = statsCoordPointer.y + game.buttonPadding * 8
+  game.player2Card.name = textbox("Player 2: ", game.player2.name, statsCoordPointer.x, statsCoordPointer.y)
+  game.player2Card.HP = textbox("HP: ", game.player2.HP, statsCoordPointer.x, statsCoordPointer.y + game.buttonPadding * 2)
+  game.player2Card.currency = textbox("Currency: ", game.player2.currency, statsCoordPointer.x, statsCoordPointer.y + game.buttonPadding * 4)
 
   -- setting up tileset
   game.tileset = love.graphics.newImage(game.tilesetURL)
@@ -176,12 +186,13 @@ function game:update(dt)
   --update game's dt variable to be used in animation
   game.dt = dt
 
+  --update player game logic
   game.player1:update(dt)
-
   if useAIFlag then --update AI agent
     agent:update()
   end
   game.player2:update(dt)
+  game.updatePlayerCards()
 
   --mouse actions
   mouseCoordX, mouseCoordY = love.mouse.getX(), love.mouse.getY()
@@ -246,6 +257,11 @@ function game:draw(dt)
     towerButton:draw()
     if (game.displayTowerButtonInfo == i) then
       towerButton:drawInfoBox()
+    end
+  end
+  for i, playerCard in ipairs({game.player1Card, game.player2Card}) do
+    for key, text in next, playerCard do
+      text:draw()
     end
   end
 
@@ -345,9 +361,6 @@ function game.refreshTowers()
   -- skeleton, for the case that towers may have HP
 end
 
-function game.updateScore(creep)
-  --blank function to be used later for incrementing score, adding money, etc.--
-end
 
 function game.generateTileTable()
 
@@ -380,6 +393,13 @@ function game:drawPaths()
     end
   end
 
+end
+
+function game:updatePlayerCards()
+  game.player1Card.HP:setExtraString(game.player1.HP)
+  game.player1Card.currency:setExtraString(game.player1.currency)
+  game.player2Card.HP:setExtraString(game.player2.HP)
+  game.player2Card.currency:setExtraString(game.player2.currency)
 end
 
 return game
