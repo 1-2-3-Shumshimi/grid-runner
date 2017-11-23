@@ -109,9 +109,10 @@ player = class {
           print("creep", i, "takes damage; HP left: ", creep.HP)
           creep:takeDamage(bulletN.damage)
           table.remove(self.playerBullets, i)
-        elseif bulletN:checkBulletReachDest(game.cellSize) then
-          table.remove(self.playerBullets, i)
         end
+      end
+      if bulletN:checkBulletReachDest(game.cellSize) then
+        table.remove(self.playerBullets, i)
       end
     end
     
@@ -161,12 +162,11 @@ player = class {
     -- draw bullets --
     love.graphics.setColor(255, 50, 50)
     
-    for i=#self.playerBullets,1,-1 do
-      bulletN = self.playerBullets[i]
+    for i, bulletN in ipairs(self.playerBullets) do
       startX, startY, bulletDx, bulletDy = bulletN:computeTrajectory(bulletN.x, bulletN.y, bulletN.destX, bulletN.destY)
 
       deltaTime = love.timer.getDelta()
-      bulletN:setCoord(startX + bulletDx * deltaTime, startY + bulletDy* deltaTime)
+      bulletN:setCoord(startX + bulletDx * deltaTime, startY + bulletDy * deltaTime)
      
       love.graphics.circle("fill", bulletN.x, bulletN.y, game.cellSize/10)
     end
