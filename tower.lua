@@ -1,5 +1,7 @@
 tower = class{
-  init = function(self, attackSpeed, damage, range, attackCapacity, size)
+  init = function(self, towerID, attackSpeed, damage, range, attackCapacity, size)
+    self.towerID = towerID
+    
     self.attackSpeed = attackSpeed
     self.damage = damage
     self.range = range
@@ -46,6 +48,25 @@ tower = class{
   
   function tower:resetOccupancy()
     self.attackOccupancy = 0
+  end
+  
+  function tower:generateBullet(destX, destY)
+    -- TODO: change the damage output from a constant
+    -- create a onHit function and pass that in
+    bulletN = bullet(50,1)
+    bulletN:setOrigin(self.coordX + self.width / 2, self.coordY + self.height / 2)
+    bulletN:setCourse(destX, destY)
+    
+    -- set any special effects the bullet will trigger when it hits a creep
+    self:setBulletOnHit(bulletN)
+    
+    self:updateDirection(destX, destY)
+    self:incrementOccupancy()
+    self.hasFired = true
+    self.lastFired = 0
+    
+    return bulletN
+    
   end
   
   function tower:draw()
@@ -95,6 +116,30 @@ tower = class{
         end
       end
     end
+  end
+  
+  function tower:setBulletOnHit(bulletN)
+    ID = self.towerID
+    if ID == 1 then
+      bulletN:setOnHit(tower.tower1Hit)
+    elseif ID == 2 then
+      bulletN:setOnHit(tower.tower2Hit)
+    end
+    
+  end
+  
+  function tower.tower1Hit(creep)
+    creep:takeDamage(bulletN.damage)
+    if creep ~= nil then
+      print("tower1hit...creep?", creep.x, creep.y)
+    end
+  end
+  
+  function tower.tower2Hit(creep)
+    if creep ~= nil then
+      print("tower22hit...creep?", creep.x, creep.y)
+    end
+    tower.tower1Hit(creep)
   end
 
 return tower

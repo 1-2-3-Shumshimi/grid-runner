@@ -8,12 +8,17 @@ bullet = class {
     self.y = 0
     self.destX = 0
     self.destY = 0
+    self.onHit = nil
   end
 }
 
 function bullet:update()
 
 
+end
+
+function bullet:setOnHit(func)
+  self.onHit = func
 end
 
 function bullet:setOrigin(towerX, towerY)

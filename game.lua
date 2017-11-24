@@ -35,7 +35,7 @@ local game = {
   player1Path = nil, player2Path = nil,
 
   mouseDisabled = false,
-  mouseDisabledMax = 25, mouseDisableCounter = 0,
+  mouseDisabledMax = 15, mouseDisableCounter = 0,
 
   creepList = {},
   creepTimer = 0, creepTimerMax = 100, creepNumMax = 10,
@@ -46,8 +46,8 @@ local game = {
   creepTexts = {"bmg1", "ftr1", "avt1", "amg1"},
 
   towerList = {},
-  towerImageURLs = {"tower_basic.png"},
-  towerTexts = {"the basic tower"},
+  towerImageURLs = {"tower_basic.png", "tower_freeze.png"},
+  towerTexts = {"the basic tower", "the freeze tower"},
   towerUpdated = false,
 
   bulletList = {},
@@ -202,8 +202,8 @@ function game:update(dt)
     if game.displayTowerButtonInfo ~= -1 then
       cellX, cellY = utils.coordToCell(mouseCoordX, mouseCoordY, game.cellSize)
       game.player1.noCreepInCell = true
-
-      game.player1:checkMoveValidity(cellX, cellY)
+      print(game.displayTowerButtonInfo)
+      game.player1:checkMoveValidity(cellX, cellY, game.displayTowerButtonInfo)
     end
   
   end
@@ -348,19 +348,6 @@ function game.setTowerInfo(index)
     game.displayTowerButtonInfo = index
   end
 end
-
-function game.generateTower(cellX, cellY)
---  towerN = tower:new(({attackSpeed = 1, damage = 2, range = 10, attackCapacity = 1, size = 2}))
-  towerN = tower(2,2,2,1,2)
-  towerN:setCoord(cellX, cellY)
-  towerN:setSpriteSheet(love.graphics.newImage("assets/"..game.towerImageURLs[1]))
-  table.insert(game.towerList, towerN)
-end
-
-function game.refreshTowers()
-  -- skeleton, for the case that towers may have HP
-end
-
 
 function game.generateTileTable()
 

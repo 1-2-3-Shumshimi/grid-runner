@@ -107,7 +107,8 @@ player = class {
         if bulletN:checkBulletHitCreep(creep.x, creep.y, game.cellSize) then
           -- damage creep health + remove bullet from list
           print("creep", i, "takes damage; HP left: ", creep.HP)
-          creep:takeDamage(bulletN.damage)
+          bulletN.onHit(creep)
+--          creep:takeDamage(bulletN.damage)
           table.remove(self.playerBullets, i)
         end
       end
@@ -172,10 +173,13 @@ player = class {
     end
   end
   
-  function player:generateTower(cellX, cellY)
-    towerN = tower(2,2,2,1,2)
+  function player:generateTower(cellX, cellY, towerID)
+    --TODO: now that we are passing in towerID, we need to create a system to differentiate
+    --different towers (replace constant values below with specific values)
+    print(towerID)
+    towerN = tower(towerID,2,2,2,1,2)
     towerN:setCoord(cellX, cellY)
-    towerN:setSpriteSheet(love.graphics.newImage("assets/"..game.towerImageURLs[1]))
+    towerN:setSpriteSheet(love.graphics.newImage("assets/"..game.towerImageURLs[towerID]))
     table.insert(self.playerTowers, towerN)
   end
   
@@ -206,25 +210,10 @@ player = class {
       local distToTower = utils.dist(x,y,creepCellX,creepCellY)
     
       if distToTower <= tower.range then      
-        self:generateBullet(tower.coordX + tower.width/2, tower.coordY + tower.height/2, creep.x, creep.y)
-        tower:updateDirection(creep.x, creep.y)
-        tower:incrementOccupancy()
-        tower.hasFired = true
-        tower.lastFired = 0
+        bulletN = tower:generateBullet(creepX, creepY)
+        table.insert(self.playerBullets, bulletN)
       end
     end
-  end
-
-  function player:generateBullet(towerX, towerY, destX, destY)
-
-    bulletN = bullet(50,1)
-    
-    bulletN:setOrigin(towerX, towerY)
-    bulletN:setCourse(destX, destY)
-    
-    -- insert into bullet list -- 
-    table.insert(self.playerBullets, bulletN)
-    
   end
 
   function player:generateCreep(creepSpriteSheet, dt)
@@ -255,16 +244,14 @@ player = class {
       if self.enemyCreeps[i]:isDead() then
         self.currency = self.currency + self.enemyCreeps[i].bounty
         table.remove(self.enemyCreeps, i)
-        print("currency for player "..self.status.." is "..self.currency)
       elseif self.enemyCreeps[i].atEnd then
         self.HP = self.HP - 1
         table.remove(self.enemyCreeps, i)
-        print("hp for player "..self.status.." is "..self.HP)
       end
     end
   end
   
-  function player:checkMoveValidity(cellX, cellY)
+  function player:checkMoveValidity(cellX, cellY, towerID)
     --check if last cell
     isLastCell = (cellX == game.bottomEnemySpawnX and cellY == game.bottomEnemySpawnY) or 
                  (cellX == game.topEnemySpawnX and cellY == game.topEnemySpawnY)
@@ -276,10 +263,10 @@ player = class {
     end
     if self.noCreepInCell and not isLastCell then
       --notice cellX and cellY are flipped to coincide with the pathfinder module
-      if self.map[cellY][cellX] == game.walkable then
+      if self.map[cellY][cellX] == game.walkable and towerID ~= nil then
         self:updateCellStatus(cellX, cellY, game.blocked)
         print("generating tower (", cellX, cellY, ")")
-        self:generateTower(cellX, cellY)
+        self:generateTower(cellX, cellY, towerID)
       elseif self.map[cellY][cellX] == game.blocked then
         self:updateCellStatus(cellX, cellY, game.walkable)
         self:removeTower(cellX, cellY)

@@ -20,7 +20,7 @@ basicAgent = class {
 }
 
 function basicAgent:update()
-  if self.timer >= 500 then
+  if self.timer >= 300 then
     self:generateCreep()
     self:generateTower()
     self:setNextCoord()
@@ -37,7 +37,7 @@ end
 function basicAgent:generateTower()
   --(Jonthan TODO) write a sligtly modified version of this function 
   -- (i.e. mouseDisabled handler is shared between players right now
-  game.player2:checkMoveValidity(self.buildNextX, self.buildNextY)
+  game.player2:checkMoveValidity(self.buildNextX, self.buildNextY, 1)
 end
 
 function basicAgent:setNextCoord()
