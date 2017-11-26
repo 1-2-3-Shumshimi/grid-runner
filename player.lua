@@ -174,10 +174,9 @@ player = class {
   end
   
   function player:generateTower(cellX, cellY, towerID)
-    --TODO: now that we are passing in towerID, we need to create a system to differentiate
-    --different towers (replace constant values below with specific values)
-    print(towerID)
-    towerN = tower(towerID,2,2,2,1,2)
+    --using the tower ID, generate a tower based on its model
+    tMod = model.towers[towerID]
+    towerN = tower(towerID,tMod.attackSpeed,tMod.damage,tMod.range,tMod.attackCapacity,tMod.size)
     towerN:setCoord(cellX, cellY)
     towerN:setSpriteSheet(love.graphics.newImage("assets/"..game.towerImageURLs[towerID]))
     table.insert(self.playerTowers, towerN)

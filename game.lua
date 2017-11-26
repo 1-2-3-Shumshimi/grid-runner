@@ -57,6 +57,10 @@ local game = {
 
 function game:enter(arg)
 
+  -- load models --
+  game.loadModels()
+  
+  -- set game map configurations --
   game.gameHeight = love.graphics.getHeight()
   game.gameWidth = (love.graphics.getWidth() * 4) / 5
   game.sideBarWidth = love.graphics.getWidth() / 5 -- let sidebar take 1/5 of the game window
@@ -293,6 +297,21 @@ function game:draw(dt)
   game.player1:draw(dt)
   game.player2:draw(dt)
 
+end
+
+function game.loadModels()
+  --load tower models
+  isFirstLine = true
+  for line in love.filesystem.lines("resource/tower-data.csv") do
+    tempTable = utils.fromCSV(line)
+    if isFirstLine then
+      model:setTowerFields(tempTable)
+      isFirstLine = false
+    else
+      model:setTowerRows(tempTable)
+    end
+  end
+  model:printTowers()
 end
 
 function game.inGameArea(mouseX, mouseY)

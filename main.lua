@@ -8,6 +8,7 @@ socket = require('socket')
 
 --utilities and entities--
 utils = require('utils')
+model = require('model')
 creep = require('creep')
 tower = require('tower')
 bullet = require('bullet')
