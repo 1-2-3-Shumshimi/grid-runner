@@ -129,17 +129,18 @@ tower = class{
   end
   
   function tower.tower1Hit(creep)
-    creep:takeDamage(bulletN.damage)
     if creep ~= nil then
-      print("tower1hit...creep?", creep.x, creep.y)
+      creep:takeDamage(bulletN.damage)
     end
   end
   
   function tower.tower2Hit(creep)
     if creep ~= nil then
-      print("tower22hit...creep?", creep.x, creep.y)
+      halfSpeed = creep.speed / 2
+      creep:setSpeed(halfSpeed)
+      creep:addDelayedAction(100, creep.changeSpeed, halfSpeed)
+      tower.tower1Hit(creep)
     end
-    tower.tower1Hit(creep)
   end
 
 return tower

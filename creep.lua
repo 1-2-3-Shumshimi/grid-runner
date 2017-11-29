@@ -6,6 +6,9 @@ creep = class {
     self.x = 0
     self.y = 0
     
+    self.delayedActionList = {}
+    self.tempFunction = nil --to briefly cache a delayed action about to execute
+    
     self.atEnd = false
     self.recentlyOffPath = false
     self.originalPath = originalPath
@@ -32,14 +35,19 @@ creep = class {
   end
 }
 
--- set health points of creep --
+  -- set health points of creep --
   function creep:setHP(HP)
     self.HP = HP
   end
   
--- set speed of creep --
+  -- set speed of creep --
   function creep:setSpeed(speed)
     self.speed = speed
+  end
+  
+  -- change speed by the given amount --
+  function creep:changeSpeed(speedDiff)
+    self.speed = self.speed + speedDiff
   end
   
   -- set x and y coord of creep --
@@ -78,6 +86,10 @@ creep = class {
     lookNextCell = false
     isLastCell = false
     next_cellX, next_cellY = nil, nil
+    
+    --countsdown and executes (if possible), delayed actions
+    --delayed actions are usually handling effects of bullets
+    self:decrementAndCheckDelayedActions() 
     
     if path then
       for node, count in path:iter() do
@@ -161,6 +173,27 @@ creep = class {
   
   function creep:takeDamage(damage)
     self.HP = self.HP - damage
+  end
+  
+  --Add a function to a list of queued functions to be performed as a callback after a given amount of time
+  --Delay: number of update iterations until function is executed
+  --Function: callback to be run
+  --Payload: a table of inputs to be passed through the function
+  function creep:addDelayedAction(delay, func, payload)
+    table.insert(self.delayedActionList, {delay, func, payload})
+  end
+  
+  function creep:decrementAndCheckDelayedActions()
+    for i, delayedAction in ipairs(self.delayedActionList) do
+      delayedAction[1] = delayedAction[1] - 1 --delayedAction[1] is the current counter for delayed action
+      if delayedAction[1] == 0 then
+        func, payload = delayedAction[2], delayedAction[3]
+        self.tempFunction = func --set the delayed function as a creep property to make it callable
+        self:tempFunction(payload) --call function with payload as input
+        table.remove(self.delayedActionList, i) --clean up and reset
+        self.tempFunction = nil
+      end
+    end
   end
   
   -- draw creep object
