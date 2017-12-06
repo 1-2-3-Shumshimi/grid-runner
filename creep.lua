@@ -1,5 +1,7 @@
 creep = class {
-  init = function(self, HP, speed, bounty, spriteSheet, originalPath, playerOwner)
+  init = function(self, creepID, HP, speed, bounty, playerOwner)
+    self.creepID = creepID
+    
     self.HP = HP
     self.speed = speed
     self.bounty = bounty
@@ -11,25 +13,30 @@ creep = class {
     
     self.atEnd = false
     self.recentlyOffPath = false
-    self.originalPath = originalPath
     self.newPath = nil
     if playerOwner == top then
+      self.originalPath = game.player1Path
       self.finder = pathfinder(game.player1Cells, 'ASTAR', game.walkable)
     elseif playerOwner == bottom then
+      self.originalPath = game.player2Path
       self.finder = pathfinder(game.player2Cells, 'ASTAR', game.walkable)
+    else
+      self.originalPath = nil
+      self.finder = nil
+      print("Warning: Unexpected playerOwner input")
     end
     self.finder:setMode('ORTHOGONAL')
     
     self.width = 32
     self.height = 32
     
-    self.spriteSheet = spriteSheet
+    self.spriteSheet = love.graphics.newImage("assets/"..game.creepImageURLs[creepID])
     if self.spriteSheet then
-      self.grid = anim8.newGrid(self.width, self.height, spriteSheet:getWidth(), spriteSheet:getHeight())
-      self.upAnim = anim8.newAnimation(self.grid('1-2', 1), game.dt*10) --TODO: variablize animation rate?
-      self.downAnim = anim8.newAnimation(self.grid('1-2', 2), game.dt*10)
-      self.leftAnim = anim8.newAnimation(self.grid(3, '1-2'), game.dt*10)
-      self.rightAnim = anim8.newAnimation(self.grid(4, '1-2'), game.dt*10)
+      self.grid = anim8.newGrid(self.width, self.height, self.spriteSheet:getWidth(), self.spriteSheet:getHeight())
+      self.upAnim = anim8.newAnimation(self.grid('1-2', 1), game.dt*10/self.speed)
+      self.downAnim = anim8.newAnimation(self.grid('1-2', 2), game.dt*10/self.speed)
+      self.leftAnim = anim8.newAnimation(self.grid(3, '1-2'), game.dt*10/self.speed)
+      self.rightAnim = anim8.newAnimation(self.grid(4, '1-2'), game.dt*10/self.speed)
     end
     self.direction = "down"
   end

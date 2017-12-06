@@ -20,6 +20,8 @@ local game = {
   tileTable = {},
 
   dt = 0,
+  incomeTimer = 0,
+  incomeLastTimeStamp = nil,
 
   initMap = {}, player1Map = {}, player2Map = {},
   walkable = 0, blocked = 10, oppSide = 20,
@@ -59,6 +61,7 @@ function game:enter(arg)
 
   -- load models --
   game.loadModels()
+  game.incomeLastTimeStamp = love.timer.getTime()
   
   -- set game map configurations --
   game.gameHeight = love.graphics.getHeight()
@@ -125,7 +128,7 @@ function game:enter(arg)
     --jonathan: this is currently set up with the vantage point that player 1 has the sidebar/buttons
     --creeps are generated to player2's list
     game.creepButtons[i]:setHit(game.player1.generateCreep)
-    game.creepButtons[i]:setText(game.creepTexts[i])
+    game.creepButtons[i]:setText(game.creepTexts[i]..": "..model.creeps[i].cost)
 
   end
   
@@ -149,7 +152,7 @@ function game:enter(arg)
     end
     
     game.towerButtons[i]:setHit(game.setTowerInfo)
-    game.towerButtons[i]:setText(game.towerTexts[i])
+    game.towerButtons[i]:setText(game.towerTexts[i]..": "..model.towers[i].cost)
     
   end
   
@@ -189,6 +192,20 @@ function game:update(dt)
 
   --update game's dt variable to be used in animation
   game.dt = dt
+  
+  --update game's income timer variable, so player classes have synchronized times when they receive income
+  currTimeStamp = love.timer.getTime()
+  if currTimeStamp - game.incomeLastTimeStamp >= 1 then --every one second
+    game.incomeTimer = game.incomeTimer + 1
+    game.incomeLastTimeStamp = currTimeStamp
+  end
+  
+  if game.incomeTimer > 15 then
+    print("taking income!")
+    game.player1:takeIncome()
+    game.player2:takeIncome()
+    game.incomeTimer = 0
+  end
 
   --update player game logic
   game.player1:update(dt)
@@ -219,7 +236,8 @@ function game:update(dt)
       game.displayCreepButtonInfo = i
       if love.mouse.isDown(1) and not game.mouseDisabled then
         --creepButton.hit(creepButton.image) commented out for testing purposes with line below
-        creepButton.hit(game.player1, love.graphics.newImage("assets/"..game.creepImageURLs[i]), dt) --NOT OPTIMAL TODO: FIX
+--        creepButton.hit(game.player1, love.graphics.newImage("assets/"..game.creepImageURLs[i]), dt) --NOT OPTIMAL TODO: FIX
+        creepButton.hit(game.player1, game.displayCreepButtonInfo, dt)
         game.mouseDisableCounter = 0
         game.mouseDisabled = true
       end
@@ -268,6 +286,9 @@ function game:draw(dt)
       text:draw()
     end
   end
+  
+  --draw income timer
+  love.graphics.print("Income countdown: "..(15-game.incomeTimer), game.gameWidth+game.buttonPadding, game.gameHeight-game.buttonPadding*2)
 
   --draw tiles--
   for rowIndex,row in ipairs(game.tileTable) do
@@ -312,6 +333,20 @@ function game.loadModels()
     end
   end
   model:printTowers()
+  
+  --load creep models
+  isFirstLine = true
+  for line in love.filesystem.lines("resource/creep-data.csv") do
+    tempTable = utils.fromCSV(line)
+    if isFirstLine then
+      model:setCreepFields(tempTable)
+      isFirstLine = false
+    else
+      model:setCreepRows(tempTable)
+    end
+  end
+  model:printCreeps()
+  
 end
 
 function game.inGameArea(mouseX, mouseY)

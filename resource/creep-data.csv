@@ -1,0 +1,5 @@
+creepID,name,cost,incomeBoost,HP,speed,bounty
+1,bmg1,5,1,200,1.5,2
+2,ftr1,10,2,600,0.5,2
+3,avt1,25,6,1800,0.75,10
+4,amg1,75,12,5400,0.5,20

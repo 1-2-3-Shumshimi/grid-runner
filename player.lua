@@ -19,6 +19,7 @@ player = class {
     self.towerSkin = towerSkin --TODO: implement
     self.creepSkin = creepSkin --TODO: implement
     self.currency = currency
+    self.income = 5
     self.defenseRating = defenseRating -- resistance to creep damage
     
     -- lists of objects
@@ -42,12 +43,17 @@ player = class {
   end
   
   function player:spendMoney(amount)
-    self.currency = self.currency - amount
-    if self.currency < 0 then
-      --reject purchase--
+    if amount <= self.currency then
+      self.currency = self.currency - amount
+      return true
+    else
+      print("don't have enough currency to spend")
       return false
     end
-    return true
+  end
+  
+  function player:takeIncome()
+    self.currency = self.currency + self.income
   end
   
   function player:toString()
@@ -215,24 +221,27 @@ player = class {
     end
   end
 
-  function player:generateCreep(creepSpriteSheet, dt)
-    
+  function player:generateCreep(creepID, dt)
     --insert creep to the OPPOSING player's enemyCreeps table
-    --thus, assign the creep the OPPOSING player path to follow
-    if self.status == top then
-      newCreep = creep(math.random(1,5)*100, 0.5, 1, creepSpriteSheet, game.player2Path, bottom)
-      newCreepCoordX, newCreepCoordY = utils.cellToCoord(game.bottomEnemySpawnX, game.bottomEnemySpawnY, game.cellSize)
-      newCreep:setCoord(newCreepCoordX + game.cellSize/4, newCreepCoordY)
-      table.insert(game.player2.enemyCreeps, newCreep)
-      
-  elseif self.status == bottom then
-      newCreep = creep(math.random(1,5)*100, 0.5, 1, creepSpriteSheet, game.player1Path, top)
-      newCreepCoordX, newCreepCoordY = utils.cellToCoord(game.topEnemySpawnX, game.topEnemySpawnY, game.cellSize)
-      newCreep:setCoord(newCreepCoordX + game.cellSize/4, newCreepCoordY)
-      table.insert(game.player1.enemyCreeps, newCreep)
-    
-    else
-      print("Something went wrong with player status/topOrBottom")
+    --so that the creep follows the OPPOSING player's path
+    cMod = model.creeps[creepID]
+    if self:spendMoney(cMod.cost) then
+      --generating creeps increases the player's income, enticing them to player more offensively by
+      --investing heavily in creep production
+      self.income = self.income + cMod.incomeBoost
+      if self.status == top then
+        creepN = creep(creepID,cMod.HP,cMod.speed,cMod.bounty,bottom)
+        creepNCoordX, creepNCoordY = utils.cellToCoord(game.bottomEnemySpawnX, game.bottomEnemySpawnY, game.cellSize)
+        creepN:setCoord(creepNCoordX + game.cellSize/4, creepNCoordY)
+        table.insert(game.player2.enemyCreeps, creepN)
+      elseif self.status == bottom then
+        creepN = creep(creepID,cMod.HP,cMod.speed,cMod.bounty,top)
+        creepNCoordX, creepNCoordY = utils.cellToCoord(game.topEnemySpawnX, game.topEnemySpawnY, game.cellSize)
+        creepN:setCoord(creepNCoordX + game.cellSize/4, creepNCoordY)
+        table.insert(game.player1.enemyCreeps, creepN)
+      else
+        print("Something went wrong with player status/topOrBottom")
+      end
     end
   end
   
@@ -263,9 +272,11 @@ player = class {
     if self.noCreepInCell and not isLastCell then
       --notice cellX and cellY are flipped to coincide with the pathfinder module
       if self.map[cellY][cellX] == game.walkable and towerID ~= nil then
-        self:updateCellStatus(cellX, cellY, game.blocked)
-        print("generating tower (", cellX, cellY, ")")
-        self:generateTower(cellX, cellY, towerID)
+        if self:spendMoney(model.towers[towerID].cost) then
+          self:updateCellStatus(cellX, cellY, game.blocked)
+          print("generating tower (", cellX, cellY, ")")
+          self:generateTower(cellX, cellY, towerID)
+        end
       elseif self.map[cellY][cellX] == game.blocked then
         self:updateCellStatus(cellX, cellY, game.walkable)
         self:removeTower(cellX, cellY)

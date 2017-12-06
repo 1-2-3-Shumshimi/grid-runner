@@ -31,7 +31,7 @@ function basicAgent:update()
 end
 
 function basicAgent:generateCreep()
-  game.player2:generateCreep(love.graphics.newImage("assets/bmg1.png"), game.dt)
+  game.player2:generateCreep(1, game.dt)
 end
 
 function basicAgent:generateTower()

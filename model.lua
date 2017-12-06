@@ -42,4 +42,40 @@ function model:printTowers()
   end
 end
 
+-- sets the keys for the creeps table
+function model:setCreepFields(inputCreepModel)
+  self.creepFields = inputCreepModel
+end
+
+-- taking in a table that has been processed from a csv file,
+-- assigns key value pairs of the attributes for each creep
+function model:setCreepRows(inputCreepRow)
+  --creepID, name, HP, speed, bounty - current model
+  if #self.creepFields == #inputCreepRow then --same number of fields
+    creepRow = {}
+    for i, field in ipairs(self.creepFields) do
+      inputCreepNumber = tonumber(inputCreepRow[i]) --convert values to numbers if you can
+      if inputCreepNumber ~= nil then
+        creepRow[field] = inputCreepNumber
+      else
+        creepRow[field] = inputCreepRow[i]
+      end
+    end
+    table.insert(self.creeps, creepRow)
+  else
+    print("number creep fields and input creep row does not match")
+  end
+end
+
+-- prints a string representation of the creeps model
+function model:printCreeps()
+  for i, row in ipairs(self.creeps) do
+    tempString = ""
+    for key, value in next, row do
+      tempString = tempString..key..": "..value..", "
+    end
+    print(string.sub(tempString, 1, -3)) --cut off trailing comma and space
+  end
+end
+
 return model
