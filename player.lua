@@ -42,9 +42,14 @@ player = class {
     return self.HP <= 0
   end
   
-  function player:spendMoney(amount)
+  function player:spendMoney(amount, incomeBoost)
     if amount <= self.currency then
       self.currency = self.currency - amount
+      if incomeBoost ~= nil then
+        --generating creeps increases the player's income, enticing them to player more offensively by
+        --investing heavily in creep production
+        self.income = self.income + cMod.incomeBoost
+      end
       return true
     else
       print("don't have enough currency to spend")
@@ -221,14 +226,16 @@ player = class {
     end
   end
 
-  function player:generateCreep(creepID, dt)
+  function player:generateCreep(creepID, dt, isPrePaid)
     --insert creep to the OPPOSING player's enemyCreeps table
     --so that the creep follows the OPPOSING player's path
+    
     cMod = model.creeps[creepID]
-    if self:spendMoney(cMod.cost) then
-      --generating creeps increases the player's income, enticing them to player more offensively by
-      --investing heavily in creep production
-      self.income = self.income + cMod.incomeBoost
+    
+    --isPrePaid boolean used to circumvent double paying at the time of creep creation (i.e. 
+    --already paid when queuing creep during batch creep wave mode)
+    if isPrePaid or self:spendMoney(cMod.cost, cMod.incomeBoost) then
+
       if self.status == top then
         creepN = creep(creepID,cMod.HP,cMod.speed,cMod.bounty,bottom)
         creepNCoordX, creepNCoordY = utils.cellToCoord(game.bottomEnemySpawnX, game.bottomEnemySpawnY, game.cellSize)

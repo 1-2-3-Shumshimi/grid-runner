@@ -3,18 +3,21 @@ local game = {
 --declaring variables--
   player1Card = {name = nil, hp = nil, currency = nil},
   player2Card = {name = nil, hp = nil, currency = nil},
-  creepImages = {}, creepButtons = {},
+  creepImages = {}, creepButtons = {}, creepButtonBatchNums = {},
   towerImages = {}, towerButtons = {},
   buttonPadding = 9,
   displayCreepButtonInfo = -1,
   displayTowerButtonInfo = -1,
+  creepWaveToggle = toggle(1000),
+  creepWaveIsBatch = false,
+  generateCreepBatchFlag = false,
 
   gameWidth = 0, gameHeight = 0, sideBarWidth = 0, sideBarHeight = 0,
   cellSize = 0, gridWidth = 0, gridHeight = 0,
 
   tileset = nil,
   tilesetURL = "assets/terrain.png",
-  tileWidth = 32, tileHeight = 32, 
+  tileWidth = 32, tileHeight = 32,
   tilesetWidth = -1, tilesetHeight = -1,
   tilesetQuads = {},
   tileTable = {},
@@ -22,6 +25,8 @@ local game = {
   dt = 0,
   incomeTimer = 0,
   incomeLastTimeStamp = nil,
+  creepBatchTimer = 0,
+  creepBatchLastTimeStamp = nil,
 
   initMap = {}, player1Map = {}, player2Map = {},
   walkable = 0, blocked = 10, oppSide = 20,
@@ -43,6 +48,8 @@ local game = {
   creepTimer = 0, creepTimerMax = 100, creepNumMax = 10,
   creepLocations = {},
   creepUpdated = true,
+  creepQueue = {},
+  lastCreepQueue = {}, --creep queue from the last batch, reversed
 
   creepImageURLs = {"bmg1.png", "ftr1.png", "avt1.png", "amg1.png"},
   creepTexts = {"bmg1", "ftr1", "avt1", "amg1"},
@@ -131,10 +138,19 @@ function game:enter(arg)
     game.creepButtons[i]:setText(game.creepTexts[i]..": "..model.creeps[i].cost)
 
   end
+
+  -- set up creep wave toggle
+  buttonCoordPointer.x = game.gameWidth
+  buttonCoordPointer.y = buttonCoordPointer.y + game.creepButtons[1].height + game.buttonPadding * 3
+  game.creepWaveToggle:setText("QUICK", "BATCH")
+  game.creepWaveToggle:setCoord(buttonCoordPointer.x + game.buttonPadding / 2, buttonCoordPointer.y, 
+    buttonCoordPointer.x + game.creepWaveToggle.leftTextBox.width + game.buttonPadding / 2, buttonCoordPointer.y)
+  game.creepWaveToggle:setStateChanges(game.updateCreepWaveMode, game.updateCreepWaveMode)
+  game.creepWaveToggle:setAlignment("center")
   
   -- set up tower buttons --
   buttonCoordPointer.x = game.gameWidth
-  buttonCoordPointer.y = buttonCoordPointer.y + game.creepButtons[1].height + game.buttonPadding * 3
+  buttonCoordPointer.y = buttonCoordPointer.y + game.creepWaveToggle.leftTextBox.height + game.buttonPadding * 3
   for i, url in ipairs(game.towerImageURLs) do 
     -- image
     game.towerImages[i] = love.graphics.newImage("assets/icons/"..url)
@@ -200,12 +216,28 @@ function game:update(dt)
     game.incomeLastTimeStamp = currTimeStamp
   end
   
-  if game.incomeTimer > 15 then
-    print("taking income!")
+  if game.incomeTimer > 15 then --When time is up gather income and release creep wave
     game.player1:takeIncome()
     game.player2:takeIncome()
     game.incomeTimer = 0
+
+    game.generateCreepBatchFlag = true -- signal release a batch of creeps
+    game.lastCreepQueue = utils.reverseTable(game.creepQueue)
+    game.creepQueue = {}
+    game.creepButtonBatchNums = {}
+    game.creepBatchLastTimeStamp = currTimeStamp
   end
+  
+  if game.generateCreepBatchFlag and currTimeStamp - game.creepBatchLastTimeStamp > 0.20 then
+    if next(game.lastCreepQueue) ~= nil then
+      creepID = table.remove(game.lastCreepQueue, #game.lastCreepQueue)
+      game.player1:generateCreep(creepID, dt, true)
+      game.creepBatchLastTimeStamp = currTimeStamp
+    else
+      game.generateCreepBatchFlag = false
+    end
+  end
+  
 
   --update player game logic
   game.player1:update(dt)
@@ -230,29 +262,54 @@ function game:update(dt)
   end
 
   --sidebar mouse actions
-  game.displayCreepButtonInfo = -1
-  for i, creepButton in ipairs(game.creepButtons) do
-    if creepButton:onButton(mouseCoordX, mouseCoordY) then
-      game.displayCreepButtonInfo = i
-      if love.mouse.isDown(1) and not game.mouseDisabled then
-        --creepButton.hit(creepButton.image) commented out for testing purposes with line below
---        creepButton.hit(game.player1, love.graphics.newImage("assets/"..game.creepImageURLs[i]), dt) --NOT OPTIMAL TODO: FIX
-        creepButton.hit(game.player1, game.displayCreepButtonInfo, dt)
-        game.mouseDisableCounter = 0
-        game.mouseDisabled = true
+  if not game.inGameArea(mouseCoordX, mouseCoordY) then
+    
+    game.displayCreepButtonInfo = -1
+    for i, creepButton in ipairs(game.creepButtons) do
+      if creepButton:onButton(mouseCoordX, mouseCoordY) then --display hover popup
+        game.displayCreepButtonInfo = i
+        if love.mouse.isDown(1) and not game.mouseDisabled then --click action depending on creep wave mode
+          
+          creepID = game.displayCreepButtonInfo
+          if game.creepWaveToggle.currentState == toggle.left then
+            creepButton.hit(game.player1, creepID, dt)
+          elseif game.creepWaveToggle.currentState == toggle.right then
+            cMod = model.creeps[creepID]
+            if game.player1:spendMoney(cMod.cost, cMod.incomeBoost) then
+              table.insert(game.creepQueue, creepID)
+              game.creepButtonBatchNums[creepID] = game.creepButtonBatchNums[creepID] == nil and 1 
+                or game.creepButtonBatchNums[creepID] + 1
+            end
+          end
+          
+          game.mouseDisableCounter = 0
+          game.mouseDisabled = true
+        
+        end
+        break
       end
-      break
     end
-  end
-  
-  for i, towerButton in ipairs(game.towerButtons) do
-    if towerButton:onButton(mouseCoordX, mouseCoordY) then
-      if love.mouse.isDown(1) and not game.mouseDisabled then
-        towerButton.hit(i)
-        game.mouseDisableCounter = 0
-        game.mouseDisabled = true
+    
+    for i, towerButton in ipairs(game.towerButtons) do
+      if towerButton:onButton(mouseCoordX, mouseCoordY) then
+        if love.mouse.isDown(1) and not game.mouseDisabled then
+          towerButton.hit(i)
+          game.mouseDisableCounter = 0
+          game.mouseDisabled = true
+        end
+        break
       end
-      break
+    end
+    
+    if love.mouse.isDown(1) and not game.mouseDisabled then
+      creepWaveToggleFlag = game.creepWaveToggle:onToggle(mouseCoordX, mouseCoordY)
+      if creepWaveToggleFlag == toggle.left then
+        game.creepWaveToggle.leftStateChange(self, constants.CREEP_WAVE_QUICK)
+      elseif creepWaveToggleFlag == toggle.right then
+        game.creepWaveToggle.rightStateChange(self, constants.CREEP_WAVE_BATCH)
+      end
+      game.mouseDisableCounter = 0
+      game.mouseDisabled = true
     end
   end
 
@@ -274,6 +331,15 @@ function game:draw(dt)
     if (game.displayCreepButtonInfo == i) then
       creepButton:drawInfoBox()
     end
+    if game.creepButtonBatchNums[i] ~= nil and game.creepButtonBatchNums[i] ~= 0 then
+      circleRadius = 12
+      labelX = creepButton.x + creepButton.width - circleRadius * 2
+      labelY = creepButton.y + circleRadius
+      love.graphics.circle("fill", labelX, labelY, circleRadius)
+      love.graphics.setColor(0, 0, 0)
+      love.graphics.print(game.creepButtonBatchNums[i], labelX - circleRadius / 2 , labelY - circleRadius / 2)
+      love.graphics.setColor(255, 255, 255)
+    end
   end
   for i, towerButton in ipairs(game.towerButtons) do
     towerButton:draw()
@@ -287,8 +353,11 @@ function game:draw(dt)
     end
   end
   
+  game.creepWaveToggle:draw()
+  love.graphics.setColor(255, 255, 255) --reset color
+  
   --draw income timer
-  love.graphics.print("Income countdown: "..(15-game.incomeTimer), game.gameWidth+game.buttonPadding, game.gameHeight-game.buttonPadding*2)
+  love.graphics.print("Wave countdown: "..(15-game.incomeTimer), game.gameWidth+game.buttonPadding, game.gameHeight-game.buttonPadding*2)
 
   --draw tiles--
   for rowIndex,row in ipairs(game.tileTable) do
@@ -441,6 +510,18 @@ function game:updatePlayerCards()
   game.player1Card.currency:setExtraString(game.player1.currency)
   game.player2Card.HP:setExtraString(game.player2.HP)
   game.player2Card.currency:setExtraString(game.player2.currency)
+end
+
+function game:updateCreepWaveMode(mode)
+  if mode == constants.CREEP_WAVE_BATCH then
+    game.creepWaveIsBatch = true
+    game.creepWaveToggle:setState(toggle.right)
+  elseif mode == constants.CREEP_WAVE_QUICK then
+    game.creepWaveIsBatch = false
+    game.creepWaveToggle:setState(toggle.left)
+  else
+    print("Invalid creep mode given")
+  end
 end
 
 return game

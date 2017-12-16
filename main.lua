@@ -8,6 +8,7 @@ socket = require('socket')
 
 --utilities and entities--
 utils = require('utils')
+constants = require('constants')
 model = require('model')
 creep = require('creep')
 tower = require('tower')
@@ -17,6 +18,7 @@ player = require('player')
 --UI elements--
 button = require('UI.button')
 textbox = require('UI.textbox')
+toggle = require('UI.toggle')
 
 --game states--
 game = require('game')
