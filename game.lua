@@ -104,8 +104,8 @@ function game:enter(arg)
   game.bottomEnemySpawnX, game.bottomEnemySpawnY = game.playerTopX, game.playerTopY + 6
 
   --instantiate players
-  game.player1 = player(1,game.player1Map,100,100,"Astro",1,1,100)
-  game.player2 = player(0,game.player2Map,100,100,"Beyónce",1,1,100)
+  game.player1 = player(1,game.player1Map,100,50,"Astro",1,1,100) --TODO variablize names
+  game.player2 = player(0,game.player2Map,100,50,"Beyónce",1,1,100)
 
   --instantiate paths
   game.player1Path = game.player1Finder:getPath(game.player1.enemySpawnSiteX, game.player1.enemySpawnSiteY, game.player1.playerX, game.player1.playerY, false)
