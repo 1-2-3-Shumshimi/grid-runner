@@ -117,7 +117,6 @@ player = class {
       for j, creep in ipairs(self.enemyCreeps) do
         if bulletN:checkBulletHitCreep(creep.x, creep.y, game.cellSize) then
           -- damage creep health + remove bullet from list
-          print("creep", i, "takes damage; HP left: ", creep.HP)
           bulletN.onHit(creep)
 --          creep:takeDamage(bulletN.damage)
           table.remove(self.playerBullets, i)
@@ -207,7 +206,6 @@ player = class {
   
     for i, creep in ipairs(self.enemyCreeps) do
       if tower:isBusy() then
-        print("tower is busy")
         break
       end
     
@@ -235,7 +233,6 @@ player = class {
     --isPrePaid boolean used to circumvent double paying at the time of creep creation (i.e. 
     --already paid when queuing creep during batch creep wave mode)
     if isPrePaid or self:spendMoney(cMod.cost, cMod.incomeBoost) then
-
       if self.status == top then
         creepN = creep(creepID,cMod.HP,cMod.speed,cMod.bounty,bottom)
         creepNCoordX, creepNCoordY = utils.cellToCoord(game.bottomEnemySpawnX, game.bottomEnemySpawnY, game.cellSize)

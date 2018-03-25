@@ -66,17 +66,22 @@ end
 
 -- Given a table, return a table with the order of its contents reversed
 function utils.reverseTable (t)
-  local i, j = 1, #t
   local ret = {}
-  
-  while i < j do
-    ret[i], ret[j] = t[j], t[i]
-    i = i + 1
-    j = j - 1
+  local j = 1
+  for i=#t, 1, -1 do
+    ret[j] = t[i]
+    j = j + 1
   end
   
   return ret
   
+end
+
+-- Wrapper for logging so print statements can easily be controlled
+function utils.log(...)
+  if debug then
+    print(...)
+  end
 end
 
 return utils

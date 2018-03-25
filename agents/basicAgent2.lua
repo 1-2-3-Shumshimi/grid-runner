@@ -64,17 +64,13 @@ function basicAgent2:setNextCoord()
 end
 
 function basicAgent2:setCreepCosts()
-  print("setting creeps")
   for i, creep in ipairs(model.creeps) do
-    print(creep.name)
     self.creepCosts[creep.creepID] = creep.cost
   end
 end
 
 function basicAgent2:setTowerCosts()
-  print("setting towers")
   for i, tower in ipairs(model.towers) do
-    print(tower.name)
     self.towerCosts[tower.towerID] = tower.cost
   end
 end
@@ -83,13 +79,10 @@ end
 --return the ID with the highest cost that the player can pay for
 -- -1 if there is nothing in the list that the player can pay for
 function basicAgent2:getBestPurchase(costTable)
-  print("getting best purchse")
-  print(costTable)
   highestCost = 0
   highestCostID = -1
   currentCurrency = game.player2.currency
   for id, cost in ipairs(costTable) do
-    print(id, cost)
     if cost > highestCost and cost <= currentCurrency then
       highestCost = cost
       highestCostID = id

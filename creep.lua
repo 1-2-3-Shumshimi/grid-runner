@@ -132,7 +132,7 @@ creep = class {
           return false
         end
       else
-        print ("Getting back on the main path")
+        -- Getting back on the main path
         self.recentlyOffPath = true
       end
       return true
