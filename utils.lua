@@ -84,4 +84,14 @@ function utils.log(...)
   end
 end
 
+-- Calling this due to a known issue related to Lua's Math library where 
+-- the first couple of random numbers after randomseed() are not actually random
+-- https://stackoverflow.com/q/461978
+function utils.doRandomSeeding()
+  math.randomseed(os.time())
+  for i=1,4 do
+    math.random()
+  end
+end
+
 return utils
