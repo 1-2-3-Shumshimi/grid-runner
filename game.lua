@@ -56,7 +56,7 @@ end
 
 function game:update(dt)
 
-  self:refreshMap()
+  self:refreshPaths()
 
   nk.frameBegin()
   style()
@@ -128,7 +128,9 @@ function game:initPathFinding()
     self:resetMaps()
   
     game.player1Finder = pathfinder(grid(game.player1PathMap), 'ASTAR', game.WALKABLE)
+    game.player1Finder:setMode('ORTHOGONAL')
     game.player2Finder = pathfinder(grid(game.player2PathMap), 'ASTAR', game.WALKABLE)
+    game.player2Finder:setMode('ORTHOGONAL')
   
     --VERY IMPORTANT TODO
     --TODO: check to see if map actually updates the path
@@ -143,7 +145,6 @@ function game:initPathFinding()
     end
     
   until ( next(game.player1Paths) ~= nil and next(game.player2Paths) ~= nil )
-  
   
 end
 
@@ -193,9 +194,67 @@ function game:resetMaps()
   end
 end
 
---TODO: 
-function game:refreshMap()
+--assigns the cells in detailed maps that should game.PATH
+function game:refreshPaths()
   
+  combinedPaths = {}
+  for i=1, #game.player1Paths do
+    for node in self:getPath(1, i):nodes() do
+      table.insert(combinedPaths, node)
+    end
+  end
+  
+  --sorted by greatest coords to the least, which is REVERSE of the usual
+  --2D table traversal. This is so that we can 'pop' off seen nodes from the table's end
+  --instead of removing from its beginning (forcing it to 'shift')
+  table.sort(combinedPaths, game.sortPathNodesByCoord)
+  headNode = table.remove(combinedPaths) --remove() the last element
+  
+  for j=1,game.GRID_COL_SIZE do
+    for i=1, game.GRID_ROW_SIZE do
+      --assign the map that cell (i, j) is part of the path
+      if headNode ~= nil and headNode:getX() == i and headNode:getY() == j then
+        game.player1DetailMap[j][i] = game.PATH
+        headNode = table.remove(combinedPaths) --move on to the next path node
+        
+      elseif game.player1DetailMap[j][i] == game.PATH then
+        --if cell is labeled as path but doesn't belong to path any longer, label it as empty
+        game.player1DetailMap[j][i] = game.EMPTY_SPACE
+        
+      end
+    end
+  end
+  
+  --same for player 2
+  combinedPaths = {}
+  for i=1, #game.player2Paths do
+    for node in self:getPath(2, i):nodes() do
+      table.insert(combinedPaths, node)
+    end
+  end
+
+  table.sort(combinedPaths, game.sortPathNodesByCoord)
+  headNode = table.remove(combinedPaths)
+  
+  for j=1,game.GRID_COL_SIZE do
+    for i=1, game.GRID_ROW_SIZE do
+      if headNode ~= nil and headNode:getX() == i and headNode:getY() == j then
+        game.player2DetailMap[j][i] = game.PATH
+        headNode = table.remove(combinedPaths)
+        
+      elseif game.player2DetailMap[j][i] == game.PATH then
+        game.player2DetailMap[j][i] = game.EMPTY_SPACE
+        
+      end
+    end
+  end
+end
+
+-- returns True if node1 should come before node2
+-- node precedes another node if their y coord is greater;
+-- if their y coord is equal, then check if their x coord is greater
+function game.sortPathNodesByCoord(node1, node2)
+  return node1:getY() > node2:getY() or (node1:getY() == node2:getY() and node1:getX() > node2:getX())
 end
 
 --single function to update BOTH path map AND detail map
@@ -304,6 +363,12 @@ function game:pushGridCellStyle(playerNum, x, y)
           ['normal'] = '#213d47'
         }
       }
+    elseif game.player1DetailMap[y][x] == game.PATH then
+      nk.stylePush {
+        ['button'] = {
+          ['normal'] = '#b0e5f2'
+        }
+      }
     else
       nk.stylePush {
         ['button'] = {
@@ -319,6 +384,12 @@ function game:pushGridCellStyle(playerNum, x, y)
       nk.stylePush {
         ['button'] = {
           ['normal'] = '#33182e'
+        }
+      }
+    elseif game.player2DetailMap[y][x] == game.PATH then
+      nk.stylePush {
+        ['button'] = {
+          ['normal'] = '#ffc4f3'
         }
       }
     else
@@ -548,6 +619,42 @@ function game:makeSpecialUnitLayout()
 --  nk.label(towerLabelAttackSpeed, 'wrap')
 --  nk.label(towerLabelEffect, 'wrap')
 --  self:nkSpace(5)
+end
+
+-- returns the path table from the table of paths for the given player
+function game:getPath(playerNum, index)
+  if playerNum == 1 and game.player1Paths[index] ~= nil then
+    return game.player1Paths[index][5]
+  elseif playerNum == 2 and game.player2Paths[index] ~= nil then
+    return game.player2Paths[index][5]
+  else
+    utils.log("in game:getPath() - encountered an error")
+    return {}
+  end
+end
+
+-- returns the start coordinates from the table of paths for the given player
+function game:getStartCoordsOfPath(playerNum, index)
+  if playerNum == 1 and game.player1Paths[index] ~= nil then
+    return game.player1Paths[index][1], game.player1Paths[index][2]
+  elseif playerNum == 2 and game.player2Paths[index] ~= nil then
+    return game.player2Paths[index][1], game.player2Paths[index][2]
+  else
+    utils.log("in game:getStartCoordsOfPath() - encountered an error")
+    return {}
+  end
+end
+
+-- returns the goal coordinates from the table of paths for the given player
+function game:getGoalCoordsOfPath(playerNum, index)
+  if playerNum == 1 and game.player1Paths[index] ~= nil then
+    return game.player1Paths[index][3], game.player1Paths[index][4]
+  elseif playerNum == 2 and game.player2Paths[index] ~= nil then
+    return game.player2Paths[index][3], game.player2Paths[index][4]
+  else
+    utils.log("in game:getGoalCoordsOfPath() - encountered an error")
+    return {}
+  end
 end
 
 function game:nkSpace(size)
