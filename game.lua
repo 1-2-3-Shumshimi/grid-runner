@@ -22,7 +22,7 @@ local game = {
   towerTitles = {"Damage", "Slow", "Distance"},
   creepStrings = {"creep_cheap", "creep_tank", "creep_fast"},
   creepTitles = {"Cheap", "Tank", "Fast"},
-  
+
   --map and path logic
   player1PathMap = {}, player2PathMap = {},
   WALKABLE = 0, BLOCKED = 1,
@@ -30,7 +30,7 @@ local game = {
   -- paths will be a list of the following data structure...
   -- {startX, startY, endX, endY, pathObject}
   player1Paths = {}, player2Paths = {},
-  
+
   --contains all static-position entities
   --to centralize updating/drawing these game elements (instead of building each element
   --by type, do it by each grid cell)
@@ -38,10 +38,10 @@ local game = {
   PATH = 1, START = 2, GOAL = 3, WAYPOINT = 4, TOWER = 5, RANDOM_BLOCK = 6,
   TOWER_1 = 5.1, TOWER_2 = 5.2, TOWER_3 = 5.3,
   EMPTY_SPACE = 0,
-  
+
   TOP_START_COORD = {}, TOP_GOAL_COORD = {},
   BOTTOM_START_COORD = {}, BOTTOM_GOAL_COORD = {},
-  
+
   prevCellX = 1, prevCellY = 1
 
 }
@@ -51,12 +51,11 @@ function game:enter(arg)
   self:updateDimensions()
   self:initEndPoints()
   self:initPathFinding()
+  self:refreshAllPaths()
 
 end
 
 function game:update(dt)
-
-  self:refreshPaths()
 
   nk.frameBegin()
   style()
@@ -114,7 +113,7 @@ function game:updateDimensions()
 end
 
 function game:initEndPoints()
-  
+
   game.TOP_START_COORD = {x = game.GRID_ROW_SIZE, y = game.GRID_COL_SIZE}
   game.TOP_GOAL_COORD = {x = 1, y = 1}
   game.BOTTOM_START_COORD = {x = 1, y = 1}
@@ -123,29 +122,29 @@ function game:initEndPoints()
 end
 
 function game:initPathFinding()
-  
+
   repeat
     self:resetMaps()
-  
+
     game.player1Finder = pathfinder(grid(game.player1PathMap), 'ASTAR', game.WALKABLE)
     game.player1Finder:setMode('ORTHOGONAL')
     game.player2Finder = pathfinder(grid(game.player2PathMap), 'ASTAR', game.WALKABLE)
     game.player2Finder:setMode('ORTHOGONAL')
-  
+
     --VERY IMPORTANT TODO
     --TODO: check to see if map actually updates the path
     self:generateRandomBlocks()
-    
+
     player1Path = game.player1Finder:getPath(game.TOP_START_COORD.x, game.TOP_START_COORD.y, game.TOP_GOAL_COORD.x, game.TOP_GOAL_COORD.y, false)
     player2Path = game.player2Finder:getPath(game.BOTTOM_START_COORD.x, game.BOTTOM_START_COORD.y, game.BOTTOM_GOAL_COORD.x, game.BOTTOM_GOAL_COORD.y, false)
-    
+
     if player1Path and player2Path then
       table.insert(game.player1Paths, {game.TOP_START_COORD.x, game.TOP_START_COORD.y, game.TOP_GOAL_COORD.x, game.TOP_GOAL_COORD.y, player1Path})
       table.insert(game.player2Paths, {game.BOTTOM_START_COORD.x, game.BOTTOM_START_COORD.y, game.BOTTOM_GOAL_COORD.x, game.BOTTOM_GOAL_COORD.y, player2Path})
     end
-    
+
   until ( next(game.player1Paths) ~= nil and next(game.player2Paths) ~= nil )
-  
+
 end
 
 function game:generateRandomBlocks()
@@ -170,84 +169,138 @@ end
 
 function game:isEndPoint(x, y)
   return (x == game.TOP_START_COORD.x and y == game.TOP_START_COORD.y)
-    or (x == game.TOP_GOAL_COORD.x and y == game.TOP_GOAL_COORD.y)
-    or (x == game.BOTTOM_START_COORD.x and y == game.BOTTOM_START_COORD.y)
-    or (x == game.BOTTOM_GOAL_COORD.x and y == game.BOTTOM_GOAL_COORD.y)
+  or (x == game.TOP_GOAL_COORD.x and y == game.TOP_GOAL_COORD.y)
+  or (x == game.BOTTOM_START_COORD.x and y == game.BOTTOM_START_COORD.y)
+  or (x == game.BOTTOM_GOAL_COORD.x and y == game.BOTTOM_GOAL_COORD.y)
 end
 
 function game:resetMaps()
   for j=1,game.GRID_COL_SIZE do
     game.player1PathMap[j] = {}
     game.player2PathMap[j] = {}
-    
+
     game.player1DetailMap[j] = {}
     game.player2DetailMap[j] = {}
-    
+
     for i=1,game.GRID_ROW_SIZE do
       game.player1PathMap[j][i] = game.WALKABLE
       game.player2PathMap[j][i] = game.WALKABLE
-      
+
       game.player1DetailMap[j][i] = game.EMPTY_SPACE
       game.player2DetailMap[j][i] = game.EMPTY_SPACE
     end
-    
+
   end
 end
 
---assigns the cells in detailed maps that should game.PATH
-function game:refreshPaths()
-  
-  combinedPaths = {}
-  for i=1, #game.player1Paths do
-    for node in self:getPath(1, i):nodes() do
-      table.insert(combinedPaths, node)
+--update a path given the player's path map and the index to their specific path
+--return true if the path was successfully updated, false otherwise
+function game:refreshSinglePath(playerNum, index)
+
+  if playerNum == 1 and game.player1Paths[index] ~= nil then
+    player1Path = game.player1Finder:getPath(game.TOP_START_COORD.x, game.TOP_START_COORD.y, game.TOP_GOAL_COORD.x, game.TOP_GOAL_COORD.y, false)
+    if player1Path then
+      game.player1Paths[index][5] = player1Path
+      return true
     end
+
+  elseif playerNum == 2 and game.player2Paths[index] ~= nil then
+    player2Path = game.player2Finder:getPath(game.BOTTOM_START_COORD.x, game.BOTTOM_START_COORD.y, game.BOTTOM_GOAL_COORD.x, game.BOTTOM_GOAL_COORD.y, false)
+    if player2Path then
+      game.player2Paths[index][5] = player2Path
+      return true
+    end
+
+  else
+    utils.log("in game:refreshSinglePath() - encountered an invalid input")
   end
-  
-  --sorted by greatest coords to the least, which is REVERSE of the usual
-  --2D table traversal. This is so that we can 'pop' off seen nodes from the table's end
-  --instead of removing from its beginning (forcing it to 'shift')
-  table.sort(combinedPaths, game.sortPathNodesByCoord)
-  headNode = table.remove(combinedPaths) --remove() the last element
-  
-  for j=1,game.GRID_COL_SIZE do
-    for i=1, game.GRID_ROW_SIZE do
-      --assign the map that cell (i, j) is part of the path
-      if headNode ~= nil and headNode:getX() == i and headNode:getY() == j then
-        game.player1DetailMap[j][i] = game.PATH
-        headNode = table.remove(combinedPaths) --move on to the next path node
-        
-      elseif game.player1DetailMap[j][i] == game.PATH then
-        --if cell is labeled as path but doesn't belong to path any longer, label it as empty
-        game.player1DetailMap[j][i] = game.EMPTY_SPACE
-        
+
+  return false
+end
+
+--assigns the cells in detailed maps that should game.PATH
+function game:refreshPaths(playerNum)
+
+  if playerNum ~= 1 and playerNum ~= 2 then
+    utils.log("in game:refreshPaths(), playerNum is not 1 or 2")
+    return false
+  end
+
+  if playerNum == 1 then
+    combinedPaths = {}
+    for i=1, #game.player1Paths do    
+      if self:refreshSinglePath(1, i) then
+
+        for node in self:getPath(1, i):nodes() do
+          table.insert(combinedPaths, node)
+        end
+      else
+        utils.log("in game:refreshPaths(), there is an invalid path for player 1")
+        return false
       end
     end
-  end
-  
-  --same for player 2
-  combinedPaths = {}
-  for i=1, #game.player2Paths do
-    for node in self:getPath(2, i):nodes() do
-      table.insert(combinedPaths, node)
+
+    --sorted by greatest coords to the least, which is REVERSE of the usual
+    --2D table traversal. This is so that we can 'pop' off seen nodes from the table's end
+    --instead of removing from its beginning (forcing it to 'shift')
+    table.sort(combinedPaths, game.sortPathNodesByCoord)
+    headNode = table.remove(combinedPaths) --remove() the last element
+
+    for j=1,game.GRID_COL_SIZE do
+      for i=1, game.GRID_ROW_SIZE do
+        --assign the map that cell (i, j) is part of the path
+        if headNode ~= nil and headNode:getX() == i and headNode:getY() == j then
+          game.player1DetailMap[j][i] = game.PATH
+          headNode = table.remove(combinedPaths) --move on to the next path node
+
+        elseif game.player1DetailMap[j][i] == game.PATH then
+          --if cell is labeled as path but doesn't belong to path any longer, label it as empty
+          game.player1DetailMap[j][i] = game.EMPTY_SPACE
+
+        end
+      end
     end
   end
 
-  table.sort(combinedPaths, game.sortPathNodesByCoord)
-  headNode = table.remove(combinedPaths)
-  
-  for j=1,game.GRID_COL_SIZE do
-    for i=1, game.GRID_ROW_SIZE do
-      if headNode ~= nil and headNode:getX() == i and headNode:getY() == j then
-        game.player2DetailMap[j][i] = game.PATH
-        headNode = table.remove(combinedPaths)
-        
-      elseif game.player2DetailMap[j][i] == game.PATH then
-        game.player2DetailMap[j][i] = game.EMPTY_SPACE
-        
+  if playerNum == 2 then
+
+    --same for player 2
+    combinedPaths = {}
+    for i=1, #game.player2Paths do
+      if self:refreshSinglePath(2, i) then
+
+        for node in self:getPath(2, i):nodes() do
+          table.insert(combinedPaths, node)
+        end
+      else
+        utils.log("in game:refreshPaths(), there is an invalid path for player 2")
+        return false
+      end
+    end
+
+    table.sort(combinedPaths, game.sortPathNodesByCoord)
+    headNode = table.remove(combinedPaths)
+
+    for j=1,game.GRID_COL_SIZE do
+      for i=1, game.GRID_ROW_SIZE do
+        if headNode ~= nil and headNode:getX() == i and headNode:getY() == j then
+          game.player2DetailMap[j][i] = game.PATH
+          headNode = table.remove(combinedPaths)
+
+        elseif game.player2DetailMap[j][i] == game.PATH then
+          game.player2DetailMap[j][i] = game.EMPTY_SPACE
+
+        end
       end
     end
   end
+  
+  return true
+end
+
+function game:refreshAllPaths()
+  self:refreshPaths(1)
+  self:refreshPaths(2)
 end
 
 -- returns True if node1 should come before node2
@@ -273,8 +326,9 @@ function game:updateMap(playerNum, tag, x, y)
     utils.log("in game:updateMap(), coordinates are invalid")
     return false
   end
-  
+
   if playerNum == 1 then
+    prevTag = game.player1DetailMap[y][x]
     game.player1DetailMap[y][x] = tag
     if tag >= game.TOWER then
       game.player1PathMap[y][x] = game.BLOCKED
@@ -282,6 +336,7 @@ function game:updateMap(playerNum, tag, x, y)
       game.player1PathMap[y][x] = game.WALKABLE
     end
   else
+    prevTag = game.player2DetailMap[y][x]
     game.player2DetailMap[y][x] = tag
     if tag >= game.TOWER then
       game.player2PathMap[y][x] = game.BLOCKED
@@ -289,6 +344,37 @@ function game:updateMap(playerNum, tag, x, y)
       game.player2PathMap[y][x] = game.WALKABLE
     end
   end
+  
+  if not self:refreshPaths(playerNum) then
+    utils.log("in game:updateMap(), reverting!")
+    self:revertBlockedPath(playerNum, prevTag, x, y)
+    return false
+  end
+  
+  return true
+end
+
+--Changes the cell at x, y of path map for the given player to a walkable space
+function game:revertBlockedPath(playerNum, tag, x, y)
+  if playerNum ~= 1 and playerNum ~= 2 then
+    utils.log("in game:revertBlockedPath(), playerNum is not 1 or 2")
+    return false
+  elseif tag < game.EMPTY_SPACE or tag > game.RANDOM_BLOCK then
+    utils.log("in game:revertBlockedPath(), tag is invalid")
+    return false
+  elseif not self:inMapArea(x, y) then
+    utils.log("in game:revertBlockedPath(), coordinates are invalid")
+    return false
+  end
+  
+  if playerNum == 1 then
+    game.player1PathMap[y][x] = game.WALKABLE
+    game.player1DetailMap[y][x] = tag
+  else
+    game.player2PathMap[y][x] = game.WALKABLE
+    game.player2DetailMap[y][x] = tag
+  end
+  
   return true
 end
 
@@ -312,21 +398,31 @@ function game:makeGrid()
   -- Player 1 (self)
   for i=1, game.GRID_COL_SIZE do
     for j=1, game.GRID_ROW_SIZE do
-      
+
       self:pushGridCellStyle(1, j, i)
       if nk.button("") then
         utils.log("player 1 button press!")
         utils.log(i, j)
+
+        --TODO: TEMPORARY TO TEST PATH
+        if game.player1DetailMap[i][j] <= game.PATH then
+          self:updateMap(1, game.TOWER_1, j, i)
+          utils.log("make tower")
+        elseif game.player1DetailMap[i][j] == game.TOWER_1 then
+          self:updateMap(1, game.EMPTY_SPACE, j, i)
+          utils.log("make space")
+        end
+        --END TEMPORARY
       end
       nk.stylePop()
-      
+
     end
   end
 
   -- Player 2 (opponent)
   for i=1, game.GRID_COL_SIZE do
     for j=1, game.GRID_ROW_SIZE do
-      
+
       self:pushGridCellStyle(2, j, i)
       if nk.button("") then
         utils.log("player 2 button press!")
@@ -335,7 +431,7 @@ function game:makeGrid()
       nk.stylePop()
     end
   end
-  
+
   nk.stylePop() --matches with the window style push
 
 end
@@ -353,11 +449,11 @@ function game:pushGridCellStyle(playerNum, x, y)
     utils.log("in game:pushGridCellStyle(), coordinates are invalid")
     return false
   end
-  
+
   if playerNum == 1 then
     --Depending on what is assigned to the detailed map cell,
     --give the cell a different color
-    if game.player1DetailMap[y][x] == game.RANDOM_BLOCK then
+    if game.player1DetailMap[y][x] >= game.TOWER then
       nk.stylePush {
         ['button'] = {
           ['normal'] = '#213d47'
@@ -380,7 +476,7 @@ function game:pushGridCellStyle(playerNum, x, y)
     end
 
   else
-    if game.player2DetailMap[y][x] == game.RANDOM_BLOCK then
+    if game.player2DetailMap[y][x] >= game.TOWER then
       nk.stylePush {
         ['button'] = {
           ['normal'] = '#33182e'
@@ -402,7 +498,7 @@ function game:pushGridCellStyle(playerNum, x, y)
       }
     end
   end
-    
+
 end
 
 --TODO: VARIABLIZE EVERYTHING
@@ -421,7 +517,7 @@ function game:makeSideBar()
   self:nkSpace(20)
   nk.label(game.tabNames[game.currentTab])
   self:nkSpace(5)
-  
+
   nk.stylePush {
     ['button'] = {
       ['hover'] = "#bfbfbf",
@@ -442,7 +538,7 @@ function game:makeSideBar()
     self:makeUpgradeCreepLayout()
 
   else -- special
-  
+
     self:makeSpecialUnitLayout()
 
   end
