@@ -231,7 +231,7 @@ function game:refreshPaths(playerNum)
     for i=1, #game.player1Paths do    
       if self:refreshSinglePath(1, i) then
 
-        for node in self:getPath(1, i):nodes() do
+        for node in self.getPath(1, i):nodes() do
           table.insert(combinedPaths, node)
         end
       else
@@ -269,7 +269,7 @@ function game:refreshPaths(playerNum)
     for i=1, #game.player2Paths do
       if self:refreshSinglePath(2, i) then
 
-        for node in self:getPath(2, i):nodes() do
+        for node in self.getPath(2, i):nodes() do
           table.insert(combinedPaths, node)
         end
       else
@@ -453,7 +453,13 @@ function game:pushGridCellStyle(playerNum, x, y)
   if playerNum == 1 then
     --Depending on what is assigned to the detailed map cell,
     --give the cell a different color
-    if game.player1DetailMap[y][x] >= game.TOWER then
+    if game.player1DetailMap[y][x] == game.RANDOM_BLOCK then
+      nk.stylePush {
+        ['button'] = {
+          ['normal'] = '#000000'
+        }
+      }
+    elseif game.player1DetailMap[y][x] >= game.TOWER then
       nk.stylePush {
         ['button'] = {
           ['normal'] = '#213d47'
@@ -476,7 +482,13 @@ function game:pushGridCellStyle(playerNum, x, y)
     end
 
   else
-    if game.player2DetailMap[y][x] >= game.TOWER then
+    if game.player2DetailMap[y][x] == game.RANDOM_BLOCK then
+      nk.stylePush {
+        ['button'] = {
+          ['normal'] = '#000000'
+        }
+      } 
+    elseif game.player2DetailMap[y][x] >= game.TOWER then
       nk.stylePush {
         ['button'] = {
           ['normal'] = '#33182e'
@@ -718,19 +730,19 @@ function game:makeSpecialUnitLayout()
 end
 
 -- returns the path table from the table of paths for the given player
-function game:getPath(playerNum, index)
+function game.getPath(playerNum, index)
   if playerNum == 1 and game.player1Paths[index] ~= nil then
     return game.player1Paths[index][5]
   elseif playerNum == 2 and game.player2Paths[index] ~= nil then
     return game.player2Paths[index][5]
   else
-    utils.log("in game:getPath() - encountered an error")
+    utils.log("in game.getPath() - encountered an error")
     return {}
   end
 end
 
 -- returns the start coordinates from the table of paths for the given player
-function game:getStartCoordsOfPath(playerNum, index)
+function game.getStartCoordsOfPath(playerNum, index)
   if playerNum == 1 and game.player1Paths[index] ~= nil then
     return game.player1Paths[index][1], game.player1Paths[index][2]
   elseif playerNum == 2 and game.player2Paths[index] ~= nil then
@@ -742,13 +754,25 @@ function game:getStartCoordsOfPath(playerNum, index)
 end
 
 -- returns the goal coordinates from the table of paths for the given player
-function game:getGoalCoordsOfPath(playerNum, index)
+function game.getGoalCoordsOfPath(playerNum, index)
   if playerNum == 1 and game.player1Paths[index] ~= nil then
     return game.player1Paths[index][3], game.player1Paths[index][4]
   elseif playerNum == 2 and game.player2Paths[index] ~= nil then
     return game.player2Paths[index][3], game.player2Paths[index][4]
   else
     utils.log("in game:getGoalCoordsOfPath() - encountered an error")
+    return {}
+  end
+end
+
+-- returns the final goal coordinates
+function game.getEndGoalCoords(playerNum)
+  if playerNum == 1 then
+    return game.TOP_GOAL_COORD
+  elseif playerNum == 2 then
+    return game.BOTTOM_GOAL_COORD
+  else
+    utils.log("in game:getEndGoalCoords() - encountered invalid playerNum")
     return {}
   end
 end
